@@ -1,0 +1,11 @@
+{
+  "status": "failed_before_inference",
+  "command": "HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 HF_DATASETS_OFFLINE=1 ./.venv311/bin/python scripts/benchmark_studio_prompt_styles.py",
+  "failure": "ModuleNotFoundError: No module named 'content_engine'",
+  "stage": "worker_initialization",
+  "model_loaded": false,
+  "generation_attempts": 0,
+  "cause": "The spawned worker ran the script by absolute path but did not add the repository root to sys.path.",
+  "resolution": "Added the repository root to the diagnostic worker import path; reran the same pre-registered benchmark successfully.",
+  "weights_downloaded": false
+}

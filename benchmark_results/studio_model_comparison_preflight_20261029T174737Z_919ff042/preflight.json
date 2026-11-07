@@ -1,0 +1,71 @@
+{
+  "status": "blocked",
+  "mode": "preflight",
+  "run_id": "studio_model_comparison_preflight_20261029T174737Z_919ff042",
+  "created_at_utc": "2026-10-29T17:47:37.546096+00:00",
+  "command": "scripts/benchmark_studio_models.py --preflight",
+  "cases_path": "/Users/admin/Downloads/contentfinal5 copy 2/benchmarks/studio_model_comparison_cases.json",
+  "case_ids": [
+    "complete_linkedin_meetup"
+  ],
+  "model_ids": {
+    "qwen": "Qwen/Qwen2.5-1.5B-Instruct",
+    "gemma": "google/gemma-3-1b-it"
+  },
+  "device": "mps",
+  "dtype": "float16",
+  "quantization": "none",
+  "offline_flags": {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1"
+  },
+  "local_files_only": true,
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 64
+  },
+  "case_timeout_seconds": 60,
+  "model_timeout_seconds": 300,
+  "minimum_available_memory_mib_before_load": 3584,
+  "license_metadata": {
+    "qwen": {
+      "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+      "snapshot_path": "/Users/admin/.cache/huggingface/hub/models--Qwen--Qwen2.5-1.5B-Instruct/snapshots/989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "license_lines": [
+        "license: apache-2.0",
+        "license_link: https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/blob/main/LICENSE"
+      ],
+      "license_review_status": "not_assessed"
+    },
+    "gemma": {
+      "model_id": "google/gemma-3-1b-it",
+      "snapshot_path": "/Users/admin/.cache/huggingface/hub/models--google--gemma-3-1b-it/snapshots/dcc83ea841ab6100d6b47a070329e1ba4cf78752",
+      "license_lines": [
+        "license: gemma",
+        "extra_gated_heading: Access Gemma on Hugging Face",
+        "extra_gated_prompt: To access Gemma on Hugging Face, you’re required to review and",
+        "agree to Google’s usage license. To do this, please ensure you’re logged in to Hugging",
+        "extra_gated_button_content: Acknowledge license"
+      ],
+      "license_review_status": "review required; cache is not proof of approval"
+    }
+  },
+  "results": {
+    "qwen": {
+      "status": "not_run_memory_or_device_guard"
+    },
+    "gemma": {
+      "status": "not_run_memory_or_device_guard"
+    }
+  },
+  "memory_note": "RSS and MPS allocations are separate measurements, may overlap, and are not summed as unified-memory use.",
+  "torch": "2.15.0",
+  "mps_built": true,
+  "mps_available": true,
+  "memory_before_any_model": {
+    "total_mib": 8192.0,
+    "available_mib": 1943.6,
+    "percent_used": 76.3
+  },
+  "blocker": "Only 1943.6 MiB available; require 3584 MiB before model load"
+}

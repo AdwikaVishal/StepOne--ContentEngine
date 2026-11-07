@@ -1,0 +1,32 @@
+{
+  "status": "success",
+  "stage": "complete",
+  "model_id": "google/gemma-3-1b-it",
+  "quantization": "none; cached safetensors loaded in float16",
+  "network_access": "disabled; local_files_only=True; HF offline flags",
+  "python": "3.11.18",
+  "machine": "arm64",
+  "tokenizer_load_seconds": 0.4890681670003687,
+  "model_load_seconds": 4.215435957998125,
+  "total_load_seconds": 4.704519041999447,
+  "torch": "2.15.0",
+  "mps_available": true,
+  "dtype": "float16",
+  "parameter_count": 999885952,
+  "peak_rss_after_load_mib": 3538.5,
+  "mps_memory_after_load_mib": {
+    "current_allocated": 1912.0,
+    "driver_allocated": 2688.4
+  },
+  "input_token_count": 25,
+  "tokenization_seconds": 0.0027292499980831053,
+  "generation_seconds": 2.197512167000241,
+  "generated_token_count": 24,
+  "output_nonempty": true,
+  "peak_rss_mib": 3538.5,
+  "mps_memory_after_generation_mib": {
+    "current_allocated": 1912.0,
+    "driver_allocated": 2698.7
+  },
+  "first_token_latency": "unavailable; generate() is non-streaming"
+}

@@ -1,0 +1,50 @@
+{
+  "name": "ml-test-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "analyze": "vite build --mode=analyze && vite-bundle-analyzer dist/stats.json"
+  },
+  "dependencies": {
+    "axios": "^1.16.0",
+    "date-fns": "^4.1.0",
+    "embla-carousel-react": "^8.6.0",
+    "framer-motion": "^12.38.0",
+    "jspdf": "^4.2.1",
+    "lucide-react": "^1.14.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-dropzone": "^15.0.0",
+    "react-hot-toast": "^2.6.0",
+    "react-intersection-observer": "^10.0.3",
+    "react-textarea-autosize": "^8.5.9",
+    "recharts": "^3.8.1",
+    "sonner": "^2.0.7",
+    "react-joyride": "^2.8.0",
+    "idb": "^8.0.0",
+    "compressorjs": "^1.2.1",
+    "react-color": "^2.19.3",
+    "fuse.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^24.12.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "typescript": "~6.0.2",
+    "typescript-eslint": "^8.58.2",
+    "vite": "^8.0.10",
+    "vite-bundle-analyzer": "^1.0.0"
+  }
+}
+

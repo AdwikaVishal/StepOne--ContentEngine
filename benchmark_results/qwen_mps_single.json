@@ -1,0 +1,43 @@
+{
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "status": "success",
+  "stage": "complete",
+  "python": "3.11.18",
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "device": "mps",
+  "dtype": "float16",
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 32
+  },
+  "prompt": "Write one short, friendly sentence welcoming attendees to a fictional community meetup.",
+  "network_access": "disabled; local_files_only=True",
+  "torch": "2.15.0",
+  "transformers": "4.57.6",
+  "tokenizers": "0.22.2",
+  "mps_built": true,
+  "mps_available": true,
+  "peak_rss_mib_before_load": 271.5,
+  "tokenizer_load_seconds": 0.1837971250024566,
+  "model_load_seconds": 35.1358557909989,
+  "load_seconds": 35.31965291600136,
+  "peak_rss_mib_after_load": 1807.8,
+  "mps_memory_after_load": {
+    "current_allocated_mib": 2968.8,
+    "driver_allocated_mib": 3152.4,
+    "recommended_max_mib": 5461.3
+  },
+  "prompt_preparation_seconds": 0.12745054100014386,
+  "tokenization_seconds": 0.11922637499810662,
+  "prompt_tokens": 43,
+  "generation_seconds": 8.759646709000663,
+  "generated_token_count": 29,
+  "output": "Welcome to our vibrant community meetup! Let's explore new ideas and connect with like-minded individuals who share your passion for [insert topic here].",
+  "peak_rss_mib_after_generation": 1807.8,
+  "mps_memory_after_generation": {
+    "current_allocated_mib": 2968.8,
+    "driver_allocated_mib": 3162.7,
+    "recommended_max_mib": 5461.3
+  }
+}

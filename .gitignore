@@ -1,0 +1,107 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+env/
+ENV/
+dist/
+build/
+*.egg-info/
+*.egg
+
+# ── Runtime data (never commit uploads or generated output) ──────────────────
+uploads/
+output/
+# models/ at repo root is cached ML weights — kept excluded
+# content_engine/models/ contains source code — explicitly include it
+!content_engine/models/
+!content_engine/models/*.py
+
+# ── Logs & PIDs ───────────────────────────────────────────────────────────────
+logs/
+*.log
+celery_worker.pid
+celery_beat.pid
+celerybeat-schedule
+celerybeat-schedule.db
+*.pid
+
+# ── Database ──────────────────────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
+
+# ── Environment ───────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+# Keep .env.example committed
+!.env.example
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+node_modules/
+dist/
+.DS_Store
+*.local
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+
+# ── Testing & coverage ────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# Historical data (do not commit)
+data/historical/*
+data/processed/*
+!data/historical/.gitkeep
+!data/processed/.gitkeep
+# Python virtual environments
+.venv/
+.venv*/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# ML model weights
+*.pt
+*.pth
+*.onnx
+*.safetensors
+*.bin
+
+# macOS
+.DS_Store
+
+# Logs and generated files
+*.log
+dump.rdb
+
+# Environment variables
+.env
+.env.*
+
+# Node
+node_modules/
+dist/
+build/

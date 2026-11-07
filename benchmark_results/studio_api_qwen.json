@@ -1,0 +1,83 @@
+{
+  "status": "safe_rejection_persisted",
+  "stage": "complete",
+  "python": "3.11.18",
+  "machine": "arm64",
+  "network_access": "disabled; Qwen loader uses local_files_only=True",
+  "platform": "instagram",
+  "timeout_seconds": 180,
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "generation_settings": "Production Instagram settings; deterministic request brief; cached model only",
+  "transport": "httpx ASGITransport in the main process thread (avoids TestClient portal thread)",
+  "project_id": "df41387a-ce8d-498a-9057-d9d2a500cba6",
+  "event_name": "Cedar Circle Community Meetup",
+  "request_started_monotonic": 21428.083428958,
+  "model_load_seconds": 23.987335208999866,
+  "device": "mps",
+  "dtype": "float16",
+  "peak_rss_after_load_mib": 1134.8,
+  "mps_memory_after_load_mib": {
+    "current_allocated": 2968.8,
+    "driver_allocated": 3162.7
+  },
+  "generation_stages": [
+    {
+      "call": 1,
+      "max_new_tokens": 40,
+      "chat_template_seconds": 0.058076458000869025,
+      "tokenization_seconds": 0.22542458300085855,
+      "input_token_count": 149,
+      "current_stage": "generation_complete",
+      "model_started_monotonic": 21456.507370083,
+      "model_generate_seconds": 5.129068292000738,
+      "decode_seconds": 0.018155625002691522,
+      "generated_token_count": 31,
+      "total_seconds": 5.372703666002053
+    },
+    {
+      "call": 2,
+      "max_new_tokens": 40,
+      "chat_template_seconds": 0.00032899999860092066,
+      "tokenization_seconds": 0.018023040996922646,
+      "input_token_count": 174,
+      "current_stage": "generation_complete",
+      "model_started_monotonic": 21461.684099083,
+      "model_generate_seconds": 1.884399124999618,
+      "decode_seconds": 0.000974292001046706,
+      "generated_token_count": 37,
+      "total_seconds": 1.9034109999993234
+    }
+  ],
+  "api_request_seconds": 35.63817341699905,
+  "http_status": 503,
+  "generation_seconds_in_provider": [
+    5.37270291599998,
+    1.903410624996468
+  ],
+  "response_detail": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+  "output": null,
+  "provider": null,
+  "job_id": "81364c55-44a6-4723-9ad7-6f1ec80d5bcc",
+  "job_status": "failed",
+  "failed_job_error": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+  "saved_output": null,
+  "saved_matches_api_output": false,
+  "saved_output_absent_on_rejection": true,
+  "torch": "2.15.0",
+  "mps_available": true,
+  "peak_rss_mib": 1134.8,
+  "mps_memory_after_request": {
+    "current_allocated_mib": 2968.8,
+    "driver_allocated_mib": 3174.7
+  },
+  "api_outcome": "rejected_and_persisted",
+  "parent_wall_time_limit_seconds": 180,
+  "termination_reason": "completed before the parent wall-time deadline",
+  "validation_diagnostic": "Validator rejected the first and retry captions for an unsupported outcome claim; exact model text was not persisted.",
+  "limitations": [
+    "The route was exercised through in-process ASGITransport, not a live Uvicorn server or frontend browser request.",
+    "The smoke app included the Studio router only and did not run api.main startup, which preloads other vision models in the background.",
+    "Generation uses non-streaming model.generate, so per-token/first-token latency is unavailable.",
+    "RSS excludes/does not represent total unified-memory consumption; MPS allocator and driver figures are reported separately and should not be summed with RSS."
+  ]
+}

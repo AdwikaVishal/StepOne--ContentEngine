@@ -1,0 +1,148 @@
+{
+  "status": "blocked",
+  "mode": "preflight",
+  "run_id": "studio_model_comparison_preflight_20261029T174905Z_4d7aec5d",
+  "created_at_utc": "2026-10-29T17:49:05.187950+00:00",
+  "command": "scripts/benchmark_studio_models.py --preflight",
+  "cases_path": "/Users/admin/Downloads/contentfinal5 copy 2/benchmarks/studio_model_comparison_cases.json",
+  "all_case_ids": [
+    "complete_linkedin_meetup",
+    "complete_instagram_open_studio",
+    "missing_logistics_short_instagram",
+    "missing_logistics_detailed_linkedin",
+    "date_location_linkedin",
+    "restrictive_brand_instagram",
+    "restrictive_brand_linkedin",
+    "misleading_visual_instagram",
+    "uncertain_visual_linkedin",
+    "short_brief_instagram",
+    "detailed_facts_linkedin",
+    "complete_brand_facts_instagram"
+  ],
+  "case_ids": [
+    "complete_linkedin_meetup"
+  ],
+  "model_ids": {
+    "qwen": "Qwen/Qwen2.5-1.5B-Instruct",
+    "gemma": "google/gemma-3-1b-it"
+  },
+  "device": "mps",
+  "dtype": "float16",
+  "quantization": "none",
+  "offline_flags": {
+    "HF_HUB_OFFLINE": "1",
+    "TRANSFORMERS_OFFLINE": "1"
+  },
+  "local_files_only": true,
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 64
+  },
+  "case_timeout_seconds": 60,
+  "model_timeout_seconds": 300,
+  "minimum_available_memory_mib_before_load": 3584,
+  "license_metadata": {
+    "qwen": {
+      "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+      "snapshot_path": "/Users/admin/.cache/huggingface/hub/models--Qwen--Qwen2.5-1.5B-Instruct/snapshots/989aa7980e4cf806f80c7fef2b1adb7bc71aa306",
+      "license_lines": [
+        "license: apache-2.0",
+        "license_link: https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/blob/main/LICENSE"
+      ],
+      "license_review_status": "not_assessed"
+    },
+    "gemma": {
+      "model_id": "google/gemma-3-1b-it",
+      "snapshot_path": "/Users/admin/.cache/huggingface/hub/models--google--gemma-3-1b-it/snapshots/dcc83ea841ab6100d6b47a070329e1ba4cf78752",
+      "license_lines": [
+        "license: gemma",
+        "extra_gated_heading: Access Gemma on Hugging Face",
+        "extra_gated_prompt: To access Gemma on Hugging Face, you’re required to review and",
+        "agree to Google’s usage license. To do this, please ensure you’re logged in to Hugging",
+        "extra_gated_button_content: Acknowledge license"
+      ],
+      "license_review_status": "review required; cache is not proof of approval"
+    }
+  },
+  "results": {
+    "qwen": {
+      "status": "not_run_memory_or_device_guard"
+    },
+    "gemma": {
+      "status": "not_run_memory_or_device_guard"
+    }
+  },
+  "outcome_definitions": {
+    "inference_status": [
+      "completed",
+      "timeout",
+      "error",
+      "not_run"
+    ],
+    "automatic_grounding": [
+      "accepted",
+      "rejected",
+      "not_run"
+    ],
+    "manual_grounding_review": [
+      "pending",
+      "grounded",
+      "unsupported"
+    ]
+  },
+  "validator_adapter": "Calls StudioContentOrchestrator._validate_generated_caption only; it does not instantiate the orchestrator, storage, API routes, or publishing integrations.",
+  "full_comparison_ready": false,
+  "next_full_command": "HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 ./.venv311/bin/python scripts/benchmark_studio_models.py --full",
+  "memory_note": "RSS and MPS allocations are separate measurements, may overlap, and are not summed as unified-memory use.",
+  "torch": "2.15.0",
+  "mps_built": true,
+  "mps_available": true,
+  "memory_before_any_model": {
+    "total_mib": 8192.0,
+    "available_mib": 2021.4,
+    "percent_used": 75.3
+  },
+  "blocker": "Only 2021.4 MiB available; require 3584 MiB before model load",
+  "preflight_smoke_status": "not_run_memory_or_device_guard",
+  "recommendation": "Do not start either model until MPS is available and at least the configured memory headroom is free; rerun --preflight first.",
+  "harness_checks": {
+    "fixed_brief_count": 12,
+    "platforms": [
+      "linkedin",
+      "instagram"
+    ],
+    "shared_fact_builder": "content_engine.studio.facts.build_fact_record",
+    "same_messages_for_both_models": true,
+    "unverified_visual_captions_separate_from_verified_facts": true,
+    "deterministic_decoding": true,
+    "unique_output_directory": true,
+    "atomic_checkpoints": true,
+    "per_case_timeout_seconds": 60,
+    "per_model_timeout_seconds": 300,
+    "cleanup": "SIGTERM then SIGKILL only to the child process group created by the harness",
+    "automatic_validator": "StudioContentOrchestrator._validate_generated_caption via side-effect-free static adapter",
+    "manual_review": "pending; separate from validator acceptance",
+    "raw_output_storage": "local per-model result artifacts only"
+  },
+  "harness_tests": {
+    "command": "./.venv311/bin/python -m pytest -q tests/test_studio_model_comparison.py",
+    "result": "9 passed",
+    "py_compile": "passed"
+  },
+  "repository_preservation": {
+    "tracked_status_entries_unchanged": true,
+    "staged_changes": 0,
+    "new_files": [
+      "benchmarks/studio_model_comparison_cases.json",
+      "scripts/benchmark_studio_models.py",
+      "tests/test_studio_model_comparison.py",
+      "benchmark_results/studio_model_comparison_preflight_20261029T174737Z_919ff042/preflight.json",
+      "benchmark_results/studio_model_comparison_preflight_20261029T174905Z_4d7aec5d/preflight.json"
+    ]
+  },
+  "prior_local_mps_load_evidence": {
+    "qwen": "benchmark_results/studio_api_qwen.json: local-only MPS float16 load 23.99s; API returned safe 503 after validator rejection",
+    "gemma": "benchmark_results/cached_gemma_mps.json: local-only MPS float16 total load 4.70s; one 24-token performance probe completed",
+    "note": "Prior probes establish load/run capability, not current-memory readiness or grounding quality."
+  }
+}

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "linkedin_professional",
+    "category": "LinkedIn professional post",
+    "brief": "A two-day product design workshop for 40 nonprofit communications teams. Attendees shared practical methods for making public information easier to use. No attendance or outcome claims beyond these facts.",
+    "captions": ["People taking notes during a workshop", "A facilitator presenting a diagram"],
+    "brand": "Clear, practical, welcoming. Prefer active voice and specific language; avoid hype.",
+    "platform": "LinkedIn",
+    "requirement": "Write a professional post of 80–120 words, ending with a thoughtful question. Use only the supplied facts and image descriptions."
+  },
+  {
+    "id": "instagram_caption",
+    "category": "Instagram caption",
+    "brief": "A neighborhood garden held its spring volunteer morning. Volunteers planted herbs and watered raised beds.",
+    "captions": ["Hands planting seedlings in a raised bed", "Watering can beside young plants"],
+    "brand": "Friendly, grounded, community-minded. No grand claims.",
+    "platform": "Instagram",
+    "requirement": "Write a concise, conversational caption with a gentle invitation to join next time and 2 relevant hashtags."
+  },
+  {
+    "id": "carousel_narrative",
+    "category": "Carousel narrative",
+    "brief": "A small bakery tested three sourdough recipes during an open kitchen day. Visitors sampled bread and left feedback.",
+    "captions": ["Dough on a work surface", "Sliced bread arranged on a board", "Visitors sampling bread"],
+    "brand": "Warm, craft-focused, honest about experimentation.",
+    "platform": "Instagram carousel",
+    "requirement": "Write a three-part narrative labeled Slide 1, Slide 2, Slide 3. Keep each part short and grounded in the descriptions."
+  },
+  {
+    "id": "video_storyboard",
+    "category": "Short-form video storyboard",
+    "brief": "A public library hosted a free repair clinic where residents brought household items for volunteer help.",
+    "captions": ["A volunteer examining a small appliance", "Tools arranged on a table", "Residents talking at a library table"],
+    "brand": "Helpful, accessible, community-focused.",
+    "platform": "Short-form video",
+    "requirement": "Create a 3-shot storyboard with visual, on-screen text, and voiceover fields for each shot. Do not invent a repair result."
+  },
+  {
+    "id": "opening_hook",
+    "category": "Strong opening hook",
+    "brief": "A team of urban planners led a walking discussion about safer crossings near a school. Participants marked locations on a printed map.",
+    "captions": ["People gathered around a street map", "A group standing at a marked crossing"],
+    "brand": "Direct, thoughtful, civic-minded. Avoid alarmism.",
+    "platform": "LinkedIn",
+    "requirement": "Give five distinct opening hooks, each under 15 words. Avoid unsupported safety claims or statistics."
+  },
+  {
+    "id": "call_to_action",
+    "category": "Call to action",
+    "brief": "A local museum is inviting residents to a free Saturday afternoon exhibition tour. Registration is available on the museum website.",
+    "captions": ["Visitors looking at paintings in a gallery"],
+    "brand": "Inviting, clear, never pushy.",
+    "platform": "Instagram",
+    "requirement": "Write three short calls to action that mention the free Saturday tour and website registration. Do not add a date or URL."
+  },
+  {
+    "id": "brand_voice",
+    "category": "Brand voice adherence",
+    "brief": "A regional transit agency is sharing a behind-the-scenes look at staff checking buses before the morning service.",
+    "captions": ["A staff member inspecting a bus", "A bus parked in a depot"],
+    "brand": "Plainspoken, reliable, people-first. Use short sentences. Do not sound promotional.",
+    "platform": "LinkedIn",
+    "requirement": "Write a 60–90 word post that follows the supplied voice and describes only what is known."
+  },
+  {
+    "id": "structured_json",
+    "category": "Structured JSON output",
+    "brief": "A community science group met at a wetland to record bird observations. No species list was supplied.",
+    "captions": ["People observing a wetland from a path", "A notebook held outdoors"],
+    "brand": "Curious, careful, factual.",
+    "platform": "Instagram",
+    "requirement": "Return only valid JSON with exactly these keys: caption (string), hashtags (array of strings), uncertainty (array of strings). Do not name any bird species."
+  },
+  {
+    "id": "missing_context",
+    "category": "Missing-context handling",
+    "brief": "Create a post from these descriptions. The organizer, date, location, and event purpose are unknown.",
+    "captions": ["A group standing together indoors", "A table with papers and cups"],
+    "brand": "Honest and neutral. Ask for missing information when needed.",
+    "platform": "LinkedIn",
+    "requirement": "Write a useful draft without guessing the event details. Clearly identify what information is missing."
+  },
+  {
+    "id": "unsupported_claims",
+    "category": "Avoiding unsupported claims",
+    "brief": "A startup team posed beside a prototype water sensor at a demonstration table. No performance data or customer results are available.",
+    "captions": ["Two people beside a small electronic device", "A close-up of a sensor prototype"],
+    "brand": "Confident but evidence-led. Do not exaggerate.",
+    "platform": "LinkedIn",
+    "requirement": "Write a short post describing the demonstration. Do not claim the device works, saves water, or has customers."
+  }
+]

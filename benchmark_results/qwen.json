@@ -1,0 +1,11 @@
+{
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "status": "failed",
+  "stage": "process",
+  "error": "Model subprocess exited before writing a report.",
+  "return_code": -11,
+  "signal": 11,
+  "python": "3.15.0",
+  "hardware": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "quality_note": "No semantic quality result is available."
+}

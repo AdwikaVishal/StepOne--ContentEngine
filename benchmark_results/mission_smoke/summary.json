@@ -1,0 +1,20 @@
+{
+  "recorded_at_utc": "2026-10-28T15:59:55.630213+00:00",
+  "models": {
+    "qwen": "qwen.json"
+  },
+  "failed_model_runs": 1,
+  "run_timeout_seconds_per_model": 60,
+  "prompt_ids": [
+    "linkedin_professional",
+    "instagram_caption",
+    "structured_json"
+  ],
+  "dtype": "bfloat16 (CPU; model configs declare bfloat16)",
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 32
+  },
+  "torch_threads": 4,
+  "instructions": "Review saved outputs manually. Each prompt is checkpointed immediately and completed prompts can be resumed. A missing local model or runtime incompatibility is recorded as a failure; no download is attempted."
+}

@@ -1,0 +1,8 @@
+{
+  "recorded_at_utc": "2026-10-28T14:57:55.903289+00:00",
+  "models": {
+    "qwen": "qwen.json"
+  },
+  "failed_model_runs": 1,
+  "instructions": "Review saved model outputs manually. A missing local model or runtime incompatibility is recorded as a failure; no download is attempted."
+}

@@ -1,0 +1,8 @@
+{
+  "status": "interrupted_too_slow",
+  "models": {
+    "qwen": "qwen.json"
+  },
+  "reason": "Bfloat16 CPU generation exceeded the practical comparison window before completing prompt 1.",
+  "no_performance_result_claimed": true
+}

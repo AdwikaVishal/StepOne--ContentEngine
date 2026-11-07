@@ -1,0 +1,37 @@
+[
+  {
+    "post_id": "syn_001",
+    "platform": "linkedin",
+    "brand": "TestBrand",
+    "content_type": "carousel",
+    "caption": "What stood out at our event: meaningful conversations and fresh ideas. The connections made here will drive innovation forward. #TestBrand #Networking",
+    "hashtags": ["#TestBrand", "#Networking"],
+    "published_at": "2024-06-15T10:00:00Z",
+    "likes": 150,
+    "comments": 12,
+    "shares": 8
+  },
+  {
+    "post_id": "syn_002",
+    "platform": "instagram",
+    "brand": "TestBrand",
+    "content_type": "reel",
+    "caption": "moments from the showcase the energy said it all swipe for highlights #TestBrand #EventLife",
+    "hashtags": ["#TestBrand", "#EventLife"],
+    "published_at": "2024-07-20T14:30:00Z",
+    "likes": 320,
+    "comments": 25,
+    "views": 2500
+  },
+  {
+    "post_id": "syn_003",
+    "platform": "linkedin",
+    "brand": "OtherBrand",
+    "content_type": "photo",
+    "caption": "Proud to showcase our latest innovations at the summit. Thank you to all who joined us. #OtherBrand #Innovation",
+    "hashtags": ["#OtherBrand", "#Innovation"],
+    "published_at": "2024-08-10T09:00:00Z",
+    "likes": 89,
+    "comments": 5
+  }
+]

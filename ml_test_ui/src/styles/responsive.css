@@ -1,0 +1,125 @@
+/* ── Responsive layout ──────────────────────────────────────────────────────── */
+
+/* ── Base: two-column grid ───────────────────────────────────────────────── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.three-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.auto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+/* ── Tablet (≤ 1024px) ───────────────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .three-col {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Tablet (≤ 900px) ────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .two-col,
+  .three-col {
+    grid-template-columns: 1fr;
+  }
+
+  .auto-grid {
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  }
+}
+
+/* ── Mobile (≤ 768px) ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Main content padding for bottom nav */
+  main {
+    padding-bottom: 80px !important;
+  }
+
+  /* Tables scroll horizontally */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Score bars stack */
+  .score-row {
+    flex-direction: column;
+  }
+
+  /* Compact padding on mobile */
+  .mobile-compact {
+    padding: 16px !important;
+  }
+
+  /* Full-width buttons on mobile */
+  .mobile-full {
+    width: 100% !important;
+  }
+
+  /* Hide desktop-only elements */
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+/* ── Small mobile (≤ 480px) ─────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .auto-grid {
+    grid-template-columns: 1fr;
+  }
+
+  body {
+    font-size: 13px;
+  }
+
+  .card-compact {
+    padding: 12px !important;
+  }
+
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Larger text inputs on small screens */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents iOS zoom */
+  }
+}
+
+/* ── Touch targets ───────────────────────────────────────────────────────── */
+@media (hover: none) {
+  button, [role="button"], a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ── High contrast mode ──────────────────────────────────────────────────── */
+@media (prefers-contrast: high) {
+  :root {
+    --b1: #6060a0;
+    --b2: #8080c0;
+    --t2: #c0bce0;
+    --t3: #9090b0;
+  }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

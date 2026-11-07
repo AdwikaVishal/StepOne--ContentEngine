@@ -1,0 +1,291 @@
+{
+  "status": "complete",
+  "python": "3.11.18",
+  "platform_info": "macOS-27.0.1-arm64-arm-64bit",
+  "network_access": "disabled; offline flags and local_files_only=True",
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "decoding": {
+    "do_sample": false,
+    "experiment_max_new_tokens": 96
+  },
+  "comparability_note": "All styles use the same 96-token output cap to isolate prompt wording. Style A uses current production prompt text; production's normal caps are 72 LinkedIn / 40 Instagram.",
+  "cases": [
+    {
+      "case_id": "supplied_facts",
+      "platform": "linkedin",
+      "fact_record": {
+        "event_name": "Harbor Hall Open Studio",
+        "verified_details": {
+          "activity": "View student design projects and share feedback",
+          "audience": null,
+          "date": "June 12, 2027",
+          "time": "2:00 PM",
+          "location": "Harbor Hall",
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional open studio where visitors may view student design projects and share feedback.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "styles": [
+        {
+          "style": "A_current_production_wording",
+          "user_prompt": "Fact record: {\"event_name\":\"Harbor Hall Open Studio\",\"verified_details\":{\"activity\":\"View student design projects and share feedback\",\"date\":\"June 12, 2027\",\"time\":\"2:00 PM\",\"location\":\"Harbor Hall\"},\"user_brief\":\"A fictional open studio where visitors may view student design projects and share feedback.\",\"brand_profile\":null,\"tone\":null}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "production_token_cap": 72,
+          "raw_output": "Join us at Harbor Hall on June 12, 2027, from 2:00 PM to explore student design projects and provide valuable feedback. Visit [Harbor Hall](https://www.linkedin.com/company/harbor-hall) for more details.",
+          "parsed_caption": "Join us at Harbor Hall on June 12, 2027, from 2:00 PM to explore student design projects and provide valuable feedback. Visit [Harbor Hall](https://www.linkedin.com/company/harbor-hall) for more details.",
+          "parse_error": null,
+          "generated_token_count": 57,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 3.3586988749993907,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen returned a link that was not provided in the brief. Add the intended URL and retry.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Unsupported URL and unprovided “for more details” CTA. The Markdown label is valid link syntax, not a placeholder; after the code fix this still fails the unprovided-URL rule.",
+          "safe_to_present_as_draft": false
+        },
+        {
+          "style": "B_minimal",
+          "user_prompt": "Write one short linkedin caption for Harbor Hall Open Studio.\nUser-supplied facts (JSON): {\"event_name\":\"Harbor Hall Open Studio\",\"verified_details\":{\"activity\":\"View student design projects and share feedback\",\"audience\":null,\"date\":\"June 12, 2027\",\"time\":\"2:00 PM\",\"location\":\"Harbor Hall\",\"organizer\":null,\"call_to_action\":null,\"key_points\":null},\"user_brief\":\"A fictional open studio where visitors may view student design projects and share feedback.\",\"brand_profile\":null,\"tone\":null,\"unknown_fields_are_null\":true}",
+          "system_prompt": "Write one short social caption. Use only facts in the user brief. A null or missing field is unknown. Do not add dates, times, places, audiences, offers, outcomes, or event details that are not stated. Return only the caption.",
+          "production_token_cap": null,
+          "raw_output": "Join us at Harbor Hall for our upcoming Open Studio! View stunning student designs and offer your insights. 🚀🎨",
+          "parsed_caption": "Join us at Harbor Hall for our upcoming Open Studio! View stunning student designs and offer your insights. 🚀🎨",
+          "parse_error": null,
+          "generated_token_count": 25,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.299133749998873,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen added an event or offer claim not present in the brief. Please retry.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Unsupported “upcoming” timing and “stunning” embellishment; the activity and venue are otherwise represented.",
+          "safe_to_present_as_draft": false
+        },
+        {
+          "style": "C_json_caption",
+          "user_prompt": "Create one short linkedin caption for Harbor Hall Open Studio. Return it in the required JSON shape. Supplied facts: {\"event_name\":\"Harbor Hall Open Studio\",\"verified_details\":{\"activity\":\"View student design projects and share feedback\",\"audience\":null,\"date\":\"June 12, 2027\",\"time\":\"2:00 PM\",\"location\":\"Harbor Hall\",\"organizer\":null,\"call_to_action\":null,\"key_points\":null},\"user_brief\":\"A fictional open studio where visitors may view student design projects and share feedback.\",\"brand_profile\":null,\"tone\":null,\"unknown_fields_are_null\":true}",
+          "system_prompt": "Return exactly one valid JSON object with exactly one string field named caption. Do not use markdown or add other keys. Use only supplied facts; null or missing fields are unknown. Do not add unsupported event details, dates, times, locations, audiences, offers, or outcomes.",
+          "production_token_cap": null,
+          "raw_output": "{\n  \"caption\": \"Check out the latest designs at our Harbor Hall Open Studio! 🎨 Share your thoughts and ideas. #DesignCommunity\"\n}",
+          "parsed_caption": "Check out the latest designs at our Harbor Hall Open Studio! 🎨 Share your thoughts and ideas. #DesignCommunity",
+          "parse_error": null,
+          "generated_token_count": 33,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.6271310000011,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen added an unsupported superlative or trend claim. Please retry with verified details.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Valid JSON shape, but “latest” is an unsupported superlative; the caption also omits supplied date and time, though the prompt did not require every fact to appear.",
+          "safe_to_present_as_draft": false
+        }
+      ]
+    },
+    {
+      "case_id": "missing_logistics",
+      "platform": "instagram",
+      "fact_record": {
+        "event_name": "Riverbend Idea Exchange",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional gathering for exchanging neighborhood project ideas.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "styles": [
+        {
+          "style": "A_current_production_wording",
+          "user_prompt": "Fact record: {\"event_name\":\"Riverbend Idea Exchange\",\"verified_details\":{},\"user_brief\":\"A fictional gathering for exchanging neighborhood project ideas.\",\"brand_profile\":null,\"tone\":null}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "production_token_cap": 40,
+          "raw_output": "Join Riverbend Idea Exchange, a vibrant community event where neighbors share & collaborate on innovative projects! #NeighborhoodInspiration #CommunityGrowth",
+          "parsed_caption": "Join Riverbend Idea Exchange, a vibrant community event where neighbors share & collaborate on innovative projects! #NeighborhoodInspiration #CommunityGrowth",
+          "parse_error": null,
+          "generated_token_count": 30,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.448066374996415,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen added an unsupported outcome claim. Please retry with verified details.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Adds a vibrant event, attendees as neighbors, collaboration, innovation, and community-growth claims not stated in the brief.",
+          "safe_to_present_as_draft": false
+        },
+        {
+          "style": "B_minimal",
+          "user_prompt": "Write one short instagram caption for Riverbend Idea Exchange.\nUser-supplied facts (JSON): {\"event_name\":\"Riverbend Idea Exchange\",\"verified_details\":{\"activity\":null,\"audience\":null,\"date\":null,\"time\":null,\"location\":null,\"organizer\":null,\"call_to_action\":null,\"key_points\":null},\"user_brief\":\"A fictional gathering for exchanging neighborhood project ideas.\",\"brand_profile\":null,\"tone\":null,\"unknown_fields_are_null\":true}",
+          "system_prompt": "Write one short social caption. Use only facts in the user brief. A null or missing field is unknown. Do not add dates, times, places, audiences, offers, outcomes, or event details that are not stated. Return only the caption.",
+          "production_token_cap": null,
+          "raw_output": "Join us at Riverbend Idea Exchange! Share your neighborhood project ideas and spark creativity with like-minded neighbors. #RiverbendIdeaExchange",
+          "parsed_caption": "Join us at Riverbend Idea Exchange! Share your neighborhood project ideas and spark creativity with like-minded neighbors. #RiverbendIdeaExchange",
+          "parse_error": null,
+          "generated_token_count": 30,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.4677292499982286,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen added an unsupported outcome claim. Please retry with verified details.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Activity is paraphrased, but “spark creativity” and “like-minded neighbors” are unsupported outcome/audience claims.",
+          "safe_to_present_as_draft": false
+        },
+        {
+          "style": "C_json_caption",
+          "user_prompt": "Create one short instagram caption for Riverbend Idea Exchange. Return it in the required JSON shape. Supplied facts: {\"event_name\":\"Riverbend Idea Exchange\",\"verified_details\":{\"activity\":null,\"audience\":null,\"date\":null,\"time\":null,\"location\":null,\"organizer\":null,\"call_to_action\":null,\"key_points\":null},\"user_brief\":\"A fictional gathering for exchanging neighborhood project ideas.\",\"brand_profile\":null,\"tone\":null,\"unknown_fields_are_null\":true}",
+          "system_prompt": "Return exactly one valid JSON object with exactly one string field named caption. Do not use markdown or add other keys. Use only supplied facts; null or missing fields are unknown. Do not add unsupported event details, dates, times, locations, audiences, offers, or outcomes.",
+          "production_token_cap": null,
+          "raw_output": "{\n  \"caption\": \"Join us at Riverbend Idea Exchange! 🌱✨ Share your neighborhood project ideas and spark creativity together! #RIVERBENDIDEAXCHANGE\"\n}",
+          "parsed_caption": "Join us at Riverbend Idea Exchange! 🌱✨ Share your neighborhood project ideas and spark creativity together! #RIVERBENDIDEAXCHANGE",
+          "parse_error": null,
+          "generated_token_count": 40,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.868504166999628,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen added an unsupported outcome claim. Please retry with verified details.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "JSON is valid, but “spark creativity” is unsupported; no date, time, or venue is invented.",
+          "safe_to_present_as_draft": false
+        }
+      ]
+    },
+    {
+      "case_id": "restrictive_brand",
+      "platform": "instagram",
+      "fact_record": {
+        "event_name": "Gentle Hands Craft Table",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional craft session where neighbors can share small handmade projects.",
+        "brand_profile": {
+          "name": "Gentle Hands",
+          "tone_of_voice": "calm and welcoming",
+          "avoid_words_claims": [
+            "best",
+            "free",
+            "guaranteed",
+            "life-changing"
+          ]
+        },
+        "tone": "calm and welcoming",
+        "unknown_fields_are_null": true
+      },
+      "styles": [
+        {
+          "style": "A_current_production_wording",
+          "user_prompt": "Fact record: {\"event_name\":\"Gentle Hands Craft Table\",\"verified_details\":{},\"user_brief\":\"A fictional craft session where neighbors can share small handmade projects.\",\"brand_profile\":{\"name\":\"Gentle Hands\",\"tone_of_voice\":\"calm and welcoming\",\"avoid_words_claims\":[\"best\",\"free\",\"guaranteed\",\"life-changing\"]},\"tone\":\"calm and welcoming\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "production_token_cap": 40,
+          "raw_output": "Join Gentle Hands' crafting community; neighbors share their handiwork, fostering warmth & creativity! #CraftingCommunity #NeighborhoodHandmade",
+          "parsed_caption": "Join Gentle Hands' crafting community; neighbors share their handiwork, fostering warmth & creativity! #CraftingCommunity #NeighborhoodHandmade",
+          "parse_error": null,
+          "generated_token_count": 29,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.4427477090030152,
+          "automated_validation": "rejected",
+          "validator_rejection_reason": "Qwen added an unsupported outcome claim. Please retry with verified details.",
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Adds warmth and creativity outcomes beyond supplied facts; the craft-session topic is otherwise relevant.",
+          "safe_to_present_as_draft": false
+        },
+        {
+          "style": "B_minimal",
+          "user_prompt": "Write one short instagram caption for Gentle Hands Craft Table.\nUser-supplied facts (JSON): {\"event_name\":\"Gentle Hands Craft Table\",\"verified_details\":{\"activity\":null,\"audience\":null,\"date\":null,\"time\":null,\"location\":null,\"organizer\":null,\"call_to_action\":null,\"key_points\":null},\"user_brief\":\"A fictional craft session where neighbors can share small handmade projects.\",\"brand_profile\":{\"name\":\"Gentle Hands\",\"tone_of_voice\":\"calm and welcoming\",\"avoid_words_claims\":[\"best\",\"free\",\"guaranteed\",\"life-changing\"]},\"tone\":\"calm and welcoming\",\"unknown_fields_are_null\":true}",
+          "system_prompt": "Write one short social caption. Use only facts in the user brief. A null or missing field is unknown. Do not add dates, times, places, audiences, offers, outcomes, or event details that are not stated. Return only the caption.",
+          "production_token_cap": null,
+          "raw_output": "Join Gentle Hands for a peaceful crafting session! Share your small handmade projects with neighbors. 🌟 #CraftingCommunity #HandmadeLove",
+          "parsed_caption": "Join Gentle Hands for a peaceful crafting session! Share your small handmade projects with neighbors. 🌟 #CraftingCommunity #HandmadeLove",
+          "parse_error": null,
+          "generated_token_count": 29,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.4465528750006342,
+          "automated_validation": "accepted",
+          "validator_rejection_reason": null,
+          "manual_grounding_review": "human-confirmed grounded",
+          "manual_review_findings": "Manual review confirms the caption: the session, sharing small handmade projects, neighbors, and peaceful/calm brand tone are grounded. It does not assert schedule, place, audience eligibility, offer, or outcome.",
+          "safe_to_present_as_draft": true
+        },
+        {
+          "style": "C_json_caption",
+          "user_prompt": "Create one short instagram caption for Gentle Hands Craft Table. Return it in the required JSON shape. Supplied facts: {\"event_name\":\"Gentle Hands Craft Table\",\"verified_details\":{\"activity\":null,\"audience\":null,\"date\":null,\"time\":null,\"location\":null,\"organizer\":null,\"call_to_action\":null,\"key_points\":null},\"user_brief\":\"A fictional craft session where neighbors can share small handmade projects.\",\"brand_profile\":{\"name\":\"Gentle Hands\",\"tone_of_voice\":\"calm and welcoming\",\"avoid_words_claims\":[\"best\",\"free\",\"guaranteed\",\"life-changing\"]},\"tone\":\"calm and welcoming\",\"unknown_fields_are_null\":true}",
+          "system_prompt": "Return exactly one valid JSON object with exactly one string field named caption. Do not use markdown or add other keys. Use only supplied facts; null or missing fields are unknown. Do not add unsupported event details, dates, times, locations, audiences, offers, or outcomes.",
+          "production_token_cap": null,
+          "raw_output": "{\n  \"caption\": \"Join us at Gentle Hands Craft Table! Share your handmade projects with neighbors. 🎨✨\"\n}",
+          "parsed_caption": "Join us at Gentle Hands Craft Table! Share your handmade projects with neighbors. 🎨✨",
+          "parse_error": null,
+          "generated_token_count": 28,
+          "max_new_tokens": 96,
+          "output_cap_hit": false,
+          "generation_seconds": 1.4193062920021475,
+          "automated_validation": "accepted",
+          "validator_rejection_reason": null,
+          "manual_grounding_review": "not confirmed grounded",
+          "manual_review_findings": "Most content matches the brief, but “at Gentle Hands Craft Table” could imply an unprovided venue; not confirmed grounded.",
+          "safe_to_present_as_draft": false
+        }
+      ]
+    }
+  ],
+  "device": "mps",
+  "dtype": "float16",
+  "model_load_seconds": 20.36525137499848,
+  "peak_process_rss_mib": 1766.7,
+  "mps_memory_mib": {
+    "current_allocated": 2968.8,
+    "driver_allocated": 3172.7
+  },
+  "stage": "complete",
+  "experiment_summary": {
+    "A_current_production_wording": {
+      "validator_accepted": 0,
+      "manual_grounded": 0,
+      "json_output_valid": null,
+      "output_cap_hits": 0,
+      "total_tokens": 116,
+      "mean_latency_seconds": 2.08
+    },
+    "B_minimal": {
+      "validator_accepted": 1,
+      "manual_grounded": 1,
+      "json_output_valid": null,
+      "output_cap_hits": 0,
+      "total_tokens": 84,
+      "mean_latency_seconds": 1.4
+    },
+    "C_json_caption": {
+      "validator_accepted": 1,
+      "manual_grounded": 0,
+      "json_output_valid": 3,
+      "output_cap_hits": 0,
+      "total_tokens": 101,
+      "mean_latency_seconds": 1.64
+    }
+  },
+  "manual_review_note": "One minimal-prompt output (restrictive-brand case) was manually confirmed grounded. A JSON-formatted output for the same case passed automated checks but was not confirmed because “at [event name]” could imply an unsupplied venue. No style was grounded across all three cases; this small one-shot experiment does not justify a production prompt change.",
+  "validation_note": "Automated validation reasons were replayed after the narrow Markdown-link-placeholder fix; generated prompts, outputs, tokens, and timings are the original controlled run."
+}

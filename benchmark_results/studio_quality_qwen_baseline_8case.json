@@ -1,0 +1,472 @@
+{
+  "status": "complete",
+  "python": "3.11.18",
+  "platform_info": "macOS-27.0.1-arm64-arm-64bit",
+  "machine": "arm64",
+  "network_access": "disabled; HF offline and local_files_only=True",
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "device": "mps",
+  "dtype": "float16",
+  "system_prompt_note": "Platform-specific system prompt recorded for each attempt.",
+  "cases": [
+    {
+      "case_id": "linkedin_factual",
+      "platform": "linkedin",
+      "event_name": "Cedar Circle Idea Meetup",
+      "brief": "A fictional community meetup where attendees share one idea for a neighborhood project.",
+      "fact_record": {
+        "event_name": "Cedar Circle Idea Meetup",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional community meetup where attendees share one idea for a neighborhood project.",
+        "brand_profile": {
+          "name": "Cedar Circle",
+          "tone_of_voice": "warm and practical",
+          "preferred_vocabulary": [
+            "neighbors",
+            "ideas"
+          ]
+        },
+        "tone": "warm and practical",
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {},
+      "brand_profile": {
+        "name": "Cedar Circle",
+        "tone_of_voice": "warm and practical",
+        "preferred_vocabulary": [
+          "neighbors",
+          "ideas"
+        ]
+      },
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Cedar Circle Idea Meetup\",\"verified_details\":{},\"user_brief\":\"A fictional community meetup where attendees share one idea for a neighborhood project.\",\"brand_profile\":{\"name\":\"Cedar Circle\",\"tone_of_voice\":\"warm and practical\",\"preferred_vocabulary\":[\"neighbors\",\"ideas\"]},\"tone\":\"warm and practical\"}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us on [insert date] at Cedar Circle's Idea Meetup! Share your ideas for making our neighborhood better, fostering warmth and practical solutions among neighbors. #CedarCircle #CommunityProjects #NeighborsUnite",
+          "generation_seconds": 7.194360000001325,
+          "generated_token_count": 44,
+          "max_new_tokens": 72
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Cedar Circle Idea Meetup\",\"verified_details\":{},\"user_brief\":\"A fictional community meetup where attendees share one idea for a neighborhood project.\",\"brand_profile\":{\"name\":\"Cedar Circle\",\"tone_of_voice\":\"warm and practical\",\"preferred_vocabulary\":[\"neighbors\",\"ideas\"]},\"tone\":\"warm and practical\"}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without square-bracketed text. Use only the event name and nonempty supplied facts. Stay within 3000 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us on [Cedar Circle] for an engaging Idea Meetup, where neighbors gather to share innovative ideas for enhancing our community together. Let's make Cedar Circle better by working together! #CedarCircle #CommunityProjects #IdeasMatter",
+          "generation_seconds": 4.512765416999173,
+          "generated_token_count": 51,
+          "max_new_tokens": 72
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen returned an unfinished placeholder. Please retry with a more specific brief.",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 38.84230791599839
+    },
+    {
+      "case_id": "instagram_factual",
+      "platform": "instagram",
+      "event_name": "Harbor Lab Open Studio",
+      "brief": "A fictional open studio where visitors can see student design projects. The event invites visitors to share feedback.",
+      "fact_record": {
+        "event_name": "Harbor Lab Open Studio",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional open studio where visitors can see student design projects. The event invites visitors to share feedback.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {},
+      "brand_profile": null,
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Harbor Lab Open Studio\",\"verified_details\":{},\"user_brief\":\"A fictional open studio where visitors can see student design projects. The event invites visitors to share feedback.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Harbor Lab's Open Studio today! Share your thoughts on student designs, fostering creativity & learning. #HarborLabOpenStudio #DesignCommunity",
+          "generation_seconds": 2.830585917003191,
+          "generated_token_count": 30,
+          "max_new_tokens": 40
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Harbor Lab Open Studio\",\"verified_details\":{},\"user_brief\":\"A fictional open studio where visitors can see student design projects. The event invites visitors to share feedback.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without unprovided schedule, timing, or offer details. Use only supplied facts. Stay within 2200 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us at Harbor Lab's Open Studio! See student designs, share your thoughts, and create together. Visit anytime; it's free and fun! #HarborLabOpenStudio #DesignCommunity #",
+          "generation_seconds": 3.2742789999974775,
+          "generated_token_count": 40,
+          "max_new_tokens": 40
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen inference failed: Qwen output reached the token limit and may be incomplete",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 6.111700707999262
+    },
+    {
+      "case_id": "uncertain_visual_caption",
+      "platform": "instagram",
+      "event_name": "Maple Room Meetup",
+      "brief": "A fictional community meetup for exchanging project ideas.",
+      "fact_record": {
+        "event_name": "Maple Room Meetup",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional community meetup for exchanging project ideas.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {},
+      "brand_profile": null,
+      "uncertain_image_captions": [
+        "a famous actor announcing a sold-out event to 500 people"
+      ],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Maple Room Meetup\",\"verified_details\":{},\"user_brief\":\"A fictional community meetup for exchanging project ideas.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us at the Maple Room Meetup tonight! Exchange ideas, collaborate, and build your projects together. #Meetup #ProjectExchange",
+          "generation_seconds": 2.421332750000147,
+          "generated_token_count": 28,
+          "max_new_tokens": 40
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Maple Room Meetup\",\"verified_details\":{},\"user_brief\":\"A fictional community meetup for exchanging project ideas.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without naming a venue unless a nonempty location field is supplied. Stay within 2200 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us at Maple Room for an engaging evening of sharing, learning, and collaboration! #Meetup #ProjectExchange",
+          "generation_seconds": 2.3117947499995353,
+          "generated_token_count": 24,
+          "max_new_tokens": 40
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen added an event or offer claim not present in the brief. Please retry.",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 4.7363058750015625
+    },
+    {
+      "case_id": "missing_details",
+      "platform": "instagram",
+      "event_name": "Open Door Meetup",
+      "brief": "A fictional meetup for sharing local project ideas.",
+      "fact_record": {
+        "event_name": "Open Door Meetup",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional meetup for sharing local project ideas.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {},
+      "brand_profile": null,
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Open Door Meetup\",\"verified_details\":{},\"user_brief\":\"A fictional meetup for sharing local project ideas.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us at Open Door Meetup for an exclusive chance to share your local project ideas with like-minded professionals! #OpenDoorMeetup #ShareYourIdeas",
+          "generation_seconds": 2.778308125001786,
+          "generated_token_count": 33,
+          "max_new_tokens": 40
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Open Door Meetup\",\"verified_details\":{},\"user_brief\":\"A fictional meetup for sharing local project ideas.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without unsupported outcomes, promises, or restricted brand claims. Stay within 2200 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Open Door's professional meetups for innovative project discussions! #OpenDoorMeetup #innovation #localprojects",
+          "generation_seconds": 2.2950381669979834,
+          "generated_token_count": 24,
+          "max_new_tokens": 40
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen added an unsupported outcome claim. Please retry with verified details.",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 5.07729095799732
+    },
+    {
+      "case_id": "supplied_date_location",
+      "platform": "linkedin",
+      "event_name": "Harbor Hall Open Studio",
+      "brief": "A fictional open studio where visitors may view student design projects and share feedback.",
+      "fact_record": {
+        "event_name": "Harbor Hall Open Studio",
+        "verified_details": {
+          "activity": "View student design projects and share feedback",
+          "audience": null,
+          "date": "June 12, 2027",
+          "time": "2:00 PM",
+          "location": "Harbor Hall",
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional open studio where visitors may view student design projects and share feedback.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {
+        "activity": "View student design projects and share feedback",
+        "date": "June 12, 2027",
+        "time": "2:00 PM",
+        "location": "Harbor Hall"
+      },
+      "brand_profile": null,
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Harbor Hall Open Studio\",\"verified_details\":{\"activity\":\"View student design projects and share feedback\",\"date\":\"June 12, 2027\",\"time\":\"2:00 PM\",\"location\":\"Harbor Hall\"},\"user_brief\":\"A fictional open studio where visitors may view student design projects and share feedback.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us at Harbor Hall on June 12, 2027, from 2:00 PM to explore student design projects and provide valuable feedback. Visit [Harbor Hall](https://www.linkedin.com/company/harbor-hall) for more details.",
+          "generation_seconds": 4.5992347079991305,
+          "generated_token_count": 57,
+          "max_new_tokens": 72
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Harbor Hall Open Studio\",\"verified_details\":{\"activity\":\"View student design projects and share feedback\",\"date\":\"June 12, 2027\",\"time\":\"2:00 PM\",\"location\":\"Harbor Hall\"},\"user_brief\":\"A fictional open studio where visitors may view student design projects and share feedback.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without square-bracketed text. Use only the event name and nonempty supplied facts. Stay within 3000 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us on June 12, 2027, at 2:00 PM in Harbor Hall for an exclusive open studio featuring student design projects, allowing you to share your insights and engage with our creative community.",
+          "generation_seconds": 4.260564500000328,
+          "generated_token_count": 48,
+          "max_new_tokens": 72
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen added an unsupported outcome claim. Please retry with verified details.",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 8.861560250003095
+    },
+    {
+      "case_id": "brand_tone_constraints",
+      "platform": "instagram",
+      "event_name": "Kindred Makers Craft Exchange",
+      "brief": "A fictional craft exchange where attendees share a small handmade project.",
+      "fact_record": {
+        "event_name": "Kindred Makers Craft Exchange",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional craft exchange where attendees share a small handmade project.",
+        "brand_profile": {
+          "name": "Kindred Makers",
+          "tone_of_voice": "playful and gentle",
+          "preferred_vocabulary": [
+            "neighbors",
+            "handmade"
+          ],
+          "avoid_words_claims": [
+            "best",
+            "sold-out"
+          ]
+        },
+        "tone": "playful and gentle",
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {},
+      "brand_profile": {
+        "name": "Kindred Makers",
+        "tone_of_voice": "playful and gentle",
+        "preferred_vocabulary": [
+          "neighbors",
+          "handmade"
+        ],
+        "avoid_words_claims": [
+          "best",
+          "sold-out"
+        ]
+      },
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Kindred Makers Craft Exchange\",\"verified_details\":{},\"user_brief\":\"A fictional craft exchange where attendees share a small handmade project.\",\"brand_profile\":{\"name\":\"Kindred Makers\",\"tone_of_voice\":\"playful and gentle\",\"preferred_vocabulary\":[\"neighbors\",\"handmade\"],\"avoid_words_claims\":[\"best\",\"sold-out\"]},\"tone\":\"playful and gentle\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Kindred Makers Craft Exchange this weekend! Share your handmade projects with neighbors, create memories together. #KindredMakers #CraftExchange #HandmadeLove",
+          "generation_seconds": 3.108443916997203,
+          "generated_token_count": 34,
+          "max_new_tokens": 40
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Kindred Makers Craft Exchange\",\"verified_details\":{},\"user_brief\":\"A fictional craft exchange where attendees share a small handmade project.\",\"brand_profile\":{\"name\":\"Kindred Makers\",\"tone_of_voice\":\"playful and gentle\",\"preferred_vocabulary\":[\"neighbors\",\"handmade\"],\"avoid_words_claims\":[\"best\",\"sold-out\"]},\"tone\":\"playful and gentle\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without unprovided schedule, timing, or offer details. Use only supplied facts. Stay within 2200 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Kindred Makers Craft Exchange this weekend! Share your handmade projects with neighbors & create unique gifts together. #KindredMakers #CraftExchange #HandmadeLove",
+          "generation_seconds": 3.696922874998563,
+          "generated_token_count": 35,
+          "max_new_tokens": 40
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen added an event or offer claim not present in the brief. Please retry.",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 6.807985167000879
+    },
+    {
+      "case_id": "instagram_factual_extra",
+      "platform": "instagram",
+      "event_name": "Willow Library Art Day",
+      "brief": "A fictional library gathering where visitors can browse community art and leave feedback.",
+      "fact_record": {
+        "event_name": "Willow Library Art Day",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": null,
+          "call_to_action": null,
+          "key_points": null
+        },
+        "user_brief": "A fictional library gathering where visitors can browse community art and leave feedback.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {},
+      "brand_profile": null,
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Willow Library Art Day\",\"verified_details\":{},\"user_brief\":\"A fictional library gathering where visitors can browse community art and leave feedback.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join us at Willow Library's Art Day! Browse vibrant community pieces, share your thoughts with artists. #WillowLibraryArtDay #CommunityCreativity",
+          "generation_seconds": 2.590238250002585,
+          "generated_token_count": 31,
+          "max_new_tokens": 40
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Willow Library Art Day\",\"verified_details\":{},\"user_brief\":\"A fictional library gathering where visitors can browse community art and leave feedback.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual Instagram caption sentence of at most 24 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once as only the finished caption. Use only information in the verified fact record. Stay within 2200 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Willow Library's vibrant Art Day! Browse local artwork, share your thoughts - it's a creative celebration for all ages! #WillowLibraryArtDay #CommunityCreativity",
+          "generation_seconds": 3.125628666999546,
+          "generated_token_count": 36,
+          "max_new_tokens": 40
+        }
+      ],
+      "retry_occurred": true,
+      "status": "accepted",
+      "validated_output": "Join Willow Library's vibrant Art Day! Browse local artwork, share your thoughts - it's a creative celebration for all ages! #WillowLibraryArtDay #CommunityCreativity",
+      "validation": "passed deterministic checks; semantic grounding remains heuristic",
+      "elapsed_seconds": 5.717824125000334
+    },
+    {
+      "case_id": "linkedin_announcement_extra",
+      "platform": "linkedin",
+      "event_name": "Northside Project Forum",
+      "brief": "A fictional forum where local groups share project ideas. The organizer invites attendees to submit one question for discussion.",
+      "fact_record": {
+        "event_name": "Northside Project Forum",
+        "verified_details": {
+          "activity": null,
+          "audience": null,
+          "date": null,
+          "time": null,
+          "location": null,
+          "organizer": "Northside Community Group",
+          "call_to_action": "Submit one question for discussion",
+          "key_points": null
+        },
+        "user_brief": "A fictional forum where local groups share project ideas. The organizer invites attendees to submit one question for discussion.",
+        "brand_profile": null,
+        "tone": null,
+        "unknown_fields_are_null": true
+      },
+      "supplied_fields": {
+        "organizer": "Northside Community Group",
+        "call_to_action": "Submit one question for discussion"
+      },
+      "brand_profile": null,
+      "uncertain_image_captions": [],
+      "attempts": [
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Northside Project Forum\",\"verified_details\":{\"organizer\":\"Northside Community Group\",\"call_to_action\":\"Submit one question for discussion\"},\"user_brief\":\"A fictional forum where local groups share project ideas. The organizer invites attendees to submit one question for discussion.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Northside Community Group's upcoming Northside Project Forum, an opportunity for local groups to share project ideas; submit one question for professional discussion.",
+          "generation_seconds": 2.7081852499977686,
+          "generated_token_count": 30,
+          "max_new_tokens": 72
+        },
+        {
+          "input_user_message": "Fact record: {\"event_name\":\"Northside Project Forum\",\"verified_details\":{\"organizer\":\"Northside Community Group\",\"call_to_action\":\"Submit one question for discussion\"},\"user_brief\":\"A fictional forum where local groups share project ideas. The organizer invites attendees to submit one question for discussion.\",\"brand_profile\":null,\"tone\":\"professional\"}. Write one factual LinkedIn announcement sentence of at most 35 words. No hashtags unless the brand guidance asks for them.\n\nRetry constraint: Rewrite once without unprovided schedule, timing, or offer details. Use only supplied facts. Stay within 3000 characters.",
+          "system_prompt": "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. Never use bracketed fill-ins. Follow the supplied brand tone and restrictions.",
+          "raw_output": "Join Northside Community Group's upcoming Northside Project Forum on [insert date], where you can contribute by submitting one thought-provoking question for an engaging dialogue with fellow community members.",
+          "generation_seconds": 3.3167563329989207,
+          "generated_token_count": 38,
+          "max_new_tokens": 72
+        }
+      ],
+      "retry_occurred": true,
+      "status": "rejected",
+      "validated_output": null,
+      "rejection_reason": "Qwen could not produce a caption that passed the content checks. Edit the brief and retry.",
+      "internal_rejection_reason": "Qwen returned an unfinished placeholder. Please retry with a more specific brief.",
+      "error_type": "StudioGenerationError",
+      "elapsed_seconds": 6.025803750002524
+    }
+  ],
+  "stage": "complete",
+  "model_load_seconds": 22.55105608300073,
+  "peak_process_rss_mib": 1459.5,
+  "mps_memory_mib": {
+    "current_allocated": 2968.8,
+    "driver_allocated": 3172.7
+  }
+}

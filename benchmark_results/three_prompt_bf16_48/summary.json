@@ -1,0 +1,24 @@
+{
+  "status": "text_comparison_inconclusive",
+  "models": {
+    "qwen": "qwen.json",
+    "gemma": "gemma.json"
+  },
+  "prompt_ids": [
+    "linkedin_professional",
+    "instagram_caption",
+    "structured_json"
+  ],
+  "generation_settings": {
+    "device": "cpu",
+    "dtype": "bfloat16",
+    "torch_threads": 4,
+    "do_sample": false,
+    "max_new_tokens": 48
+  },
+  "qwen_completed_prompts": 0,
+  "gemma_completed_prompts": 0,
+  "text_outputs_available_for_review": false,
+  "blip_smoke": "../blip_smoke.json",
+  "note": "Both text models loaded from cache but were stopped after approximately 90 seconds without completing prompt 1. No text latency or quality result is claimed. BLIP is image captioning and is reported separately."
+}

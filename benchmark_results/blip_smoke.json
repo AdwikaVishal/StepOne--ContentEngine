@@ -1,0 +1,26 @@
+{
+  "model_id": "Salesforce/blip-image-captioning-base",
+  "task": "image captioning (not text generation)",
+  "image_path": "/Users/admin/Downloads/contentfinal5 copy 2/test_photos/download.jpg",
+  "image_asset_id": "download.jpg",
+  "device": "cpu",
+  "dtype": "float32",
+  "python": "3.13.18",
+  "hardware": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "recorded_at_utc": "2026-10-28T15:24:05.363013+00:00",
+  "status": "ok",
+  "caption_is_unverified_observation": true,
+  "quality_note": "Caption is an unverified image description; it is not evidence of identity, location, date, or event.",
+  "torch": "2.14.1",
+  "transformers": "4.57.6",
+  "peak_process_rss_mib_before_load": 367.90625,
+  "load_seconds": 0.3568033749997994,
+  "peak_process_rss_mib_after_load": 387.359375,
+  "generation_settings": {
+    "max_new_tokens": 48,
+    "do_sample": false
+  },
+  "caption_latency_seconds": 3.167101750001166,
+  "caption": "a woman with a large afro hairs",
+  "peak_process_rss_mib": 1003.78125
+}

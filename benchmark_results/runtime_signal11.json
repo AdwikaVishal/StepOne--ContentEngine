@@ -1,0 +1,33 @@
+{
+  "environment": {
+    "python": "3.15.0",
+    "torch": "2.14.1",
+    "transformers": "5.21.0",
+    "tokenizers": "0.23.3",
+    "platform": "macOS arm64"
+  },
+  "models": {
+    "qwen": {
+      "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+      "process_exit_status": 139,
+      "signal": 11,
+      "stderr_observed": [
+        "[transformers] `torch_dtype` is deprecated! Use `dtype` instead!",
+        "PyTorch distributed redirect note: redirects are not supported on macOS."
+      ],
+      "python_traceback": null
+    },
+    "gemma": {
+      "model_id": "google/gemma-3-1b-it",
+      "process_exit_status": 139,
+      "signal": 11,
+      "stderr_observed": [
+        "[transformers] `torch_dtype` is deprecated! Use `dtype` instead!",
+        "PyTorch distributed redirect note: redirects are not supported on macOS."
+      ],
+      "python_traceback": null
+    }
+  },
+  "interpretation": "Native SIGSEGV ended both system-Python model processes before a Python exception could be raised. Under the existing Python 3.13 / Transformers 4.57.6 virtual environment, both models loaded successfully; this points to the system runtime stack rather than establishing a model defect. Python 3.13 still falls outside the repository's declared Python range.",
+  "no_generation_result_claimed": true
+}

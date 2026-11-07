@@ -1,0 +1,123 @@
+/* ── Micro-interactions & page transitions ──────────────────────────────────── */
+
+/* Page fade/slide */
+.page-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 300ms ease-out;
+}
+.page-exit {
+  opacity: 1;
+  transform: translateY(0);
+}
+.page-exit-active {
+  opacity: 0;
+  transform: translateY(-20px);
+  transition: all 250ms ease-in;
+}
+
+/* Hover scale/glow */
+.hover-scale {
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s ease;
+}
+.hover-scale:hover {
+  transform: scale(1.02);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Button pulse */
+@keyframes button-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(124, 106, 255, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(124, 106, 255, 0); }
+}
+.btn-pulse {
+  animation: button-pulse 2s infinite;
+}
+
+/* Counter bounce */
+@keyframes counter-bounce {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* Tab slide */
+.tab-slide-enter {
+  transform: translateX(20px);
+  opacity: 0;
+}
+.tab-slide-enter-active {
+  transform: translateX(0);
+  opacity: 1;
+  transition: all 0.25s ease-out;
+}
+
+/* Success ring */
+@keyframes success-ring {
+  0% { transform: scale(0); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.success-ring {
+  position: absolute;
+  border: 4px solid var(--green);
+  border-radius: 50%;
+  animation: success-ring 0.6s ease-out;
+}
+
+/* Drag glow */
+@keyframes drag-glow {
+  0% { box-shadow: 0 0 0 0 rgba(124, 106, 255, 0.5); }
+  70% { box-shadow: 0 0 0 20px rgba(124, 106, 255, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(124, 106, 255, 0); }
+}
+.drag-over {
+  animation: drag-glow 1s ease-out;
+}
+
+/* Gradient border animation */
+@keyframes gradient-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Shimmer for loading */
+@keyframes shimmer-move {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.shimmer-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent);
+  animation: shimmer-move 1.5s infinite;
+}
+
+/* Stagger children */
+.stagger-children > * {
+  animation: fadeUp 0.3s ease forwards;
+  opacity: 0;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.10s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.20s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+.stagger-children > *:nth-child(6) { animation-delay: 0.30s; }
+
+/* Print optimizations */
+@media print {
+  @page { margin: 0.5in; }
+  .no-print { display: none !important; }
+}

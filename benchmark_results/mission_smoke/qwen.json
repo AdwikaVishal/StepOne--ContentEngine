@@ -1,0 +1,35 @@
+{
+  "model_id": "Qwen/Qwen2.5-1.5B-Instruct",
+  "status": "timeout",
+  "recorded_at_utc": "2026-10-28T15:58:55.606552+00:00",
+  "python": "3.13.18",
+  "hardware": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "processor": "arm",
+  "device": "cpu",
+  "dtype": "bfloat16 (model config; both caches declare bfloat16)",
+  "generation": {
+    "do_sample": false,
+    "max_new_tokens": 32
+  },
+  "torch_threads": 4,
+  "prompt_ids": [
+    "linkedin_professional",
+    "instagram_caption",
+    "structured_json"
+  ],
+  "results": [],
+  "time_to_first_token": "Unavailable: non-streaming generate() API used.",
+  "quality_note": "Semantic quality is for human review; no heuristic score is presented as objective quality.",
+  "torch": "2.14.1",
+  "transformers": "4.57.6",
+  "tokenizers": "0.22.2",
+  "mps_built": true,
+  "mps_available": false,
+  "peak_process_rss_mib_before_load": 250.6875,
+  "load_seconds": 2.956637541999953,
+  "peak_process_rss_after_load_mib": 441.65625,
+  "stage": "process_timeout",
+  "timeout_seconds": 60,
+  "error": "Model process exceeded the configured wall-time limit; completed prompt results are preserved.",
+  "log_path": "benchmark_results/mission_smoke/qwen.log"
+}

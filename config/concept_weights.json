@@ -1,0 +1,60 @@
+{
+  "_comment": "Weights for event concept relevance scoring. Higher = more important for asset selection.",
+  "_note": "Override per-event via API: POST /api/pipeline with concept_weights JSON field.",
+
+  "default": {
+    "speech":           1.0,
+    "audience":         1.0,
+    "networking":       1.2,
+    "award":            1.5,
+    "presentation":     1.0,
+    "crowd":            0.8,
+    "stage":            1.1,
+    "logo":             0.6,
+    "handshake":        1.3,
+    "applause":         1.2,
+    "dinner":           0.9,
+    "panel discussion": 1.1,
+    "keynote":          1.4,
+    "workshop":         1.1,
+    "exhibition":       1.0
+  },
+
+  "award_ceremony": {
+    "award":      2.0,
+    "handshake":  1.8,
+    "applause":   1.8,
+    "stage":      1.5,
+    "crowd":      1.2,
+    "keynote":    0.8,
+    "networking": 0.8
+  },
+
+  "tech_conference": {
+    "keynote":          1.8,
+    "presentation":     1.6,
+    "stage":            1.5,
+    "audience":         1.3,
+    "panel discussion": 1.4,
+    "networking":       1.2,
+    "workshop":         1.3
+  },
+
+  "networking_event": {
+    "networking": 2.0,
+    "handshake":  1.8,
+    "dinner":     1.5,
+    "crowd":      1.3,
+    "audience":   1.0,
+    "award":      0.7
+  },
+
+  "product_launch": {
+    "logo":         2.0,
+    "presentation": 1.8,
+    "stage":        1.6,
+    "audience":     1.4,
+    "keynote":      1.5,
+    "exhibition":   1.3
+  }
+}
