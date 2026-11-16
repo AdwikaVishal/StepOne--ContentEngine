@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  BarChart3, BriefcaseBusiness, Camera, ChevronLeft, Download,
+  BarChart3, BriefcaseBusiness, Camera, ChevronLeft, CheckCircle, Download,
   Eye, File, FileDown, FileText, Film, Folder, Image, RefreshCw,
   Smartphone, Tag as TagIcon, AlertTriangle, Sparkles
 } from 'lucide-react'
@@ -55,6 +55,18 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
   const [showInspector, setShowInspector] = useState(false)
   const activeFileNames = isBrandMode && activeBrandId
     ? fileNames.filter(n => n.startsWith(`${activeBrandId}/`)) : fileNames
+
+  // Reel state derived from backend metadata (authoritative) rather than
+  // stale frontend state. Distinguishes:
+  //   - no videos uploaded
+  //   - videos uploaded but reel not requested
+  //   - videos uploaded, reel requested, processing
+  //   - video processing failed
+  //   - reel successfully generated
+  const reelStatus: string = result?.reel_status ?? (reelUrl ? 'generated' : 'not_requested')
+  const videoCount: number = result?.video_count ?? 0
+  const generateReel: boolean = result?.generate_reel ?? false
+  const reelError: string | null = result?.reel_error ?? null
 
   const getUrl  = (pat: RegExp) => { const k = activeFileNames.find(n => pat.test(n)); return k ? files[k] : undefined }
   const getUrls = (pat: RegExp) => activeFileNames.filter(n => pat.test(n)).sort().map(n => files[n])
@@ -368,12 +380,44 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
                           <p style={{ fontSize: 13, fontWeight: 600 }}>instagram_reel.mp4</p>
                           <p style={{ fontSize: 11, color: 'var(--t3)' }}>1080×1920 · H.264</p>
                         </div>
-                        <Btn size="sm" onClick={() => dl(reelUrl, 'instagram_reel.mp4')}><Download size={13} /> Download</Btn>
+                        <Btn size="sm" onClick={() => dl(reelUrl, 'instagram_reel.mp4')}> <Download size={13} /> Download</Btn>
                       </div>
                     </Card>
-                  : <Card style={{ borderColor: 'rgba(245,158,11,0.25)', background: 'rgba(245,158,11,0.04)' }}>
-                      <p style={{ fontSize: 13, color: '#fde68a', display: 'flex', alignItems: 'center', gap: 8 }}><AlertTriangle size={14} /> No video assets uploaded. Add MP4/MOV files to generate a Reel.</p>
+                  : videoCount === 0
+                    ? <Card style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }}>
+                        <p style={{ fontSize: 13, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <AlertTriangle size={14} /> No video assets uploaded. Add MP4/MOV files to generate a Reel.
+                        </p>
+                      </Card>
+                    : generateReel && reelStatus === 'failed'
+                      ? <Card style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }}>
+                          <p style={{ fontSize: 13, color: '#fca5a5', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <AlertTriangle size={14} /> Video processing failed. {reelError ? `(${reelError})` : ''}
+                          </p>
+                        </Card>
+                : generateReel && reelStatus === 'pending'
+                  ? <Card style={{ borderColor: 'rgba(245,158,11,0.25)', background: 'rgba(245,158,11,0.04)' }}>
+                      <p style={{ fontSize: 13, color: '#fde68a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite', color: 'var(--yellow)' }} /> Reel is processing…
+                      </p>
                     </Card>
+                  : generateReel && reelStatus === 'skipped'
+                    ? <Card style={{ borderColor: 'rgba(245,158,11,0.25)', background: 'rgba(245,158,11,0.04)' }}>
+                        <p style={{ fontSize: 13, color: '#fde68a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <AlertTriangle size={14} /> Video assets uploaded but reel generation was skipped. {reelError ? `${reelError.replace(/_/g, ' ')}.` : 'No highlight clips available.'}
+                        </p>
+                      </Card>
+                    : generateReel
+                      ? <Card style={{ borderColor: 'rgba(245,158,11,0.25)', background: 'rgba(245,158,11,0.04)' }}>
+                          <p style={{ fontSize: 13, color: '#fde68a', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <AlertTriangle size={14} /> Video assets uploaded but reel could not be generated. FFmpeg is required to assemble MP4/MOV clips into a Reel.
+                          </p>
+                        </Card>
+                      : <Card style={{ borderColor: 'rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.04)' }}>
+                          <p style={{ fontSize: 13, color: '#34d399', display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <CheckCircle size={14} /> {videoCount} video asset{videoCount !== 1 ? 's' : ''} uploaded. Reel generation not requested for this job.
+                          </p>
+                        </Card>
                 }
               </div>
             </div>

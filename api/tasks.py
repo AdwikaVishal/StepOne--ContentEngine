@@ -411,6 +411,9 @@ def run_generate_task(
                     "final_score": metadata.final_score,
                     "scene_concepts": metadata.scene_concepts,
                     "face_count": metadata.face_count,
+                    "asset_type": metadata.asset_type,
+                    "duration": metadata.duration,
+                    "highlight_clips": metadata.highlight_clips or [],
                 })
             else:
                 all_processed_assets.append({
@@ -420,6 +423,9 @@ def run_generate_task(
                     "final_score": 0.0,
                     "scene_concepts": [],
                     "face_count": 0,
+                    "asset_type": "image",
+                    "duration": 0.0,
+                    "highlight_clips": [],
                 })
         job_data["assets"] = all_processed_assets
         _save_job_to_redis(self.request.id, job_data)
@@ -443,11 +449,53 @@ def run_generate_task(
 
         _update(self, "finalising", 95, job_data)
         payload = _output_payload(out_dir)
+
+        # Read reel status sidecar written by the orchestrator
+        reel_status = {}
+        try:
+            import json as _json
+            rs_path = Path(out_dir) / "reel_status.json"
+            if rs_path.is_file():
+                reel_status = _json.loads(rs_path.read_text(encoding="utf-8"))
+        except Exception:
+            reel_status = {}
+
+        # Count video assets from processed metadata
+        video_assets = [
+            {
+                "filename": a.get("filename", ""),
+                "path": a.get("path", ""),
+                "duration": a.get("duration", 0.0),
+                "highlight_clips": a.get("highlight_clips", []),
+                "asset_type": a.get("asset_type", "video"),
+            }
+            for a in all_processed_assets
+            if a.get("asset_type") == "video"
+        ]
+
+        # Aggregate scene concepts and face count for caption regeneration context
+        all_concepts: List[str] = []
+        total_faces = 0
+        for a in all_processed_assets:
+            for c in (a.get("scene_concepts") or []):
+                if c not in all_concepts:
+                    all_concepts.append(c)
+            total_faces += int(a.get("face_count") or 0)
+
         payload.update({
             "status": "completed",
             "event": event_name,
+            "event_description": event_description,
+            "scene_concepts": all_concepts,
+            "face_count": total_faces,
             "mode": options.get("mode", "standard"),
             "selections": len(selections),
+            "generate_reel": bool(options.get("generate_reel", False)),
+            "reel_status": reel_status.get("reel_status", "not_requested"),
+            "reel_url": reel_status.get("reel_url"),
+            "reel_error": reel_status.get("reel_error"),
+            "video_count": reel_status.get("video_count", len(video_assets)),
+            "video_assets": video_assets,
         })
         logger.info("generate_fast_task_done", job_id=self.request.id, files=len(payload["files"]))
 
@@ -472,6 +520,7 @@ def run_generate_task(
         job_data.update({
             "status": "FAILURE",
             "error": str(exc),
+            "reel_status": "failed" if bool((options or {}).get("generate_reel", False)) else "not_requested",
             "updated_at": datetime.utcnow().isoformat() if 'datetime' in globals() else None,
         })
         _save_job_to_redis(self.request.id, job_data)

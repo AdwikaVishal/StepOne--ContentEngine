@@ -84,9 +84,10 @@ class ContentEngine:
         """Score a single image through all four models."""
         quality = self.quality_assessor.assess(asset_path)
 
-        if quality["quality_score"] < _QUALITY_FLOOR:
-            _log.info('asset_rejected', reason='quality_floor', quality=round(quality['quality_score'],2), asset=Path(asset_path).name)
-            return None
+        # Technical quality = blur + brightness only (exclude aesthetic so metrics stay separated)
+        technical_quality = round(
+            quality["blur_score"] * 0.5 + quality["brightness_score"] * 0.3, 4
+        )
 
         face_result = self.face_detector.detect_faces_detailed(asset_path)
         content = self.content_understander.understand_image(asset_path)
@@ -98,6 +99,18 @@ class ContentEngine:
         concept_match_score = content["concept_match_score"]
         if concept_match_score is None:
             concept_match_score = 0.0
+
+        # ── Classification from available signals (never fabricate) ─────────
+        category, class_conf = self._classify_asset(
+            content["scene_concepts"],
+            face_result["face_count"],
+            quality,
+        )
+
+        # ── Composite final score ──────────────────────────────────────────
+        # Weights: quality 30%, aesthetic 20%, faces 30%, concepts 20%.
+        # Missing signals (faces=0, concepts=0) contribute 0 rather than
+        # penalising the asset — they simply don't add to the score.
         final_score = (
             quality["quality_score"] * _WEIGHT_QUALITY
             + quality["aesthetic_score"] * _WEIGHT_AESTHETIC
@@ -115,6 +128,13 @@ class ContentEngine:
             relevance_scores=content["relevance_scores"],
             scene_concepts=content["scene_concepts"],
             final_score=final_score,
+            # Separated metrics
+            technical_quality=technical_quality,
+            semantic_relevance=concept_match_score,
+            model_confidence=concept_match_score,
+            uncalibrated=True,
+            classification=category,
+            classification_confidence=class_conf,
         )
 
     def _best_video_frame(self, asset_path: str, cap: cv2.VideoCapture,
@@ -214,6 +234,9 @@ class ContentEngine:
         )
 
         # Extract highlights and adjust score by highlight quality (with timeout)
+        # Highlight extraction requires ffmpeg/ffprobe; if unavailable, the video
+        # is still a valid asset — it just won't have highlight clips for reel
+        # assembly.
         try:
             import signal
             class TimeoutException(Exception):

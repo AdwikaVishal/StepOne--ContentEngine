@@ -109,6 +109,7 @@ class ContentOrchestrator:
         linkedin_layout: str = "hero_right",
         story_layout: str = "single",
         reel_layout: str = "standard",
+        generate_reel: bool = False,
     ) -> Path:
         """
         Process an entire asset folder and write all outputs.
@@ -120,6 +121,7 @@ class ContentOrchestrator:
             linkedin_layout: Layout to use for LinkedIn collage.
             story_layout: Layout to use for Instagram Stories.
             reel_layout: Layout to use for Instagram Reel.
+            generate_reel: Whether to attempt reel generation from video assets.
 
         Returns:
             Path to the output directory.
@@ -157,8 +159,6 @@ class ContentOrchestrator:
                   stories=len(story_assets))
 
         # Save selection report immediately
-        # NOTE: keep this robust for Celery JSON backends: _save_selection_report
-        # must not write Python-native non-JSON types.
         self._save_selection_report(selections, out_dir)
 
 
@@ -203,7 +203,9 @@ class ContentOrchestrator:
                 _log.error('stories_failed', error=str(e))
 
         # Instagram reel
-        if reel_selections:
+        reel_generated = False
+        reel_error = None
+        if generate_reel and reel_selections:
             reel_asset = reel_selections[0].asset
             if reel_asset.highlight_clips:
                 try:
@@ -215,17 +217,44 @@ class ContentOrchestrator:
                         layout=reel_layout
                     )
                     if ok:
+                        reel_generated = True
                         total_s = sum(
                             c["end"] - c["start"]
                             for c in reel_asset.highlight_clips
                         )
                         _log.info('reel_done', duration_s=round(total_s), clips=len(reel_asset.highlight_clips), layout=reel_layout)
                     else:
+                        reel_error = "ffmpeg_unavailable"
                         _log.warning('reel_failed', reason='ffmpeg_unavailable')
                 except Exception as e:
+                    reel_error = str(e)
                     _log.error('reel_failed', error=str(e))
             else:
+                reel_error = "no_highlight_clips"
                 _log.info('reel_skipped', reason='no_highlight_clips')
+        elif generate_reel and not reel_selections:
+            reel_error = "no_video_assets"
+            _log.info('reel_skipped', reason='no_video_assets')
+
+        # Write reel status sidecar for the frontend
+        try:
+            (out_dir / "reel_status.json").write_text(
+                json.dumps({
+                    "generate_reel": generate_reel,
+                    "reel_generated": reel_generated,
+                    "reel_status": (
+                        "generated" if reel_generated
+                        else "failed" if reel_error == "ffmpeg_unavailable"
+                        else "skipped"
+                    ),
+                    "reel_error": reel_error,
+                    "video_count": n_vid,
+                    "reel_url": f"/output/{out_dir.name}/instagram_reel.mp4" if reel_generated else None,
+                }, indent=2),
+                encoding="utf-8",
+            )
+        except Exception as e:
+            _log.error('reel_status_write_failed', error=str(e))
 
         # ── Crop intelligence report ────────────────────────────────────────
         # Write per-image, per-format crop metadata so the frontend can inspect
@@ -413,7 +442,7 @@ class ContentOrchestrator:
                         reel_asset.path,
                         reel_asset.highlight_clips,
                         reel_path,
-                        layout=reel_layout
+                        layout=reel_layout,
                     )
                     if ok:
                         total_s = sum(
@@ -427,6 +456,23 @@ class ContentOrchestrator:
                     _log.error('reel_failed', error=str(e))
             else:
                 _log.info('reel_skipped', reason='no_highlight_clips')
+
+        # Write reel status sidecar for the frontend
+        try:
+            reel_url = f"/output/{out_dir.name}/instagram_reel.mp4"
+            (out_dir / "reel_status.json").write_text(
+                json.dumps({
+                    "generate_reel": True,
+                    "reel_generated": (out_dir / "instagram_reel.mp4").is_file(),
+                    "reel_status": "generated" if (out_dir / "instagram_reel.mp4").is_file() else "failed",
+                    "reel_error": None if (out_dir / "instagram_reel.mp4").is_file() else "ffmpeg_or_highlights_missing",
+                    "video_count": sum(1 for a in all_assets if a.asset_type == "video"),
+                    "reel_url": reel_url if (out_dir / "instagram_reel.mp4").is_file() else None,
+                }, indent=2),
+                encoding="utf-8",
+            )
+        except Exception as e:
+            _log.error('reel_status_write_failed', error=str(e))
 
         # ── Crop intelligence report ────────────────────────────────────────
         # Write per-image, per-format crop metadata so the frontend can inspect
@@ -563,6 +609,23 @@ class ContentOrchestrator:
                     )
                 except Exception as e:
                     _log.error("reel_failed", error=str(e))
+
+        # Write reel status sidecar for the frontend
+        try:
+            reel_url = f"/output/{out_dir.name}/instagram_reel.mp4"
+            (out_dir / "reel_status.json").write_text(
+                json.dumps({
+                    "generate_reel": generate_reel,
+                    "reel_generated": (out_dir / "instagram_reel.mp4").is_file(),
+                    "reel_status": "generated" if (out_dir / "instagram_reel.mp4").is_file() else ("failed" if generate_reel else "skipped"),
+                    "reel_error": None if (out_dir / "instagram_reel.mp4").is_file() else ("ffmpeg_or_highlights_missing" if generate_reel else None),
+                    "video_count": sum(1 for a in all_selected_assets if a.asset_type == "video"),
+                    "reel_url": reel_url if (out_dir / "instagram_reel.mp4").is_file() else None,
+                }, indent=2),
+                encoding="utf-8",
+            )
+        except Exception as e:
+            _log.error("reel_status_write_failed", error=str(e))
 
         captions = {
             "linkedin_caption.txt": self._copy.generate_linkedin_caption(

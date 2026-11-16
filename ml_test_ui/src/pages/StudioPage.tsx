@@ -137,9 +137,10 @@ export default function StudioPage({ onResult, apiOk, onRetryConnection }: Props
     sessionStorage.removeItem('ce_active_job_event')
     const loadingId = toast.loading('Submitting job…')
     try {
+      const wantsReel = cfg.platforms.includes('reel')
       const r = brandMode
-        ? await generateFast(files, { eventName: cfg.eventName, eventDescription: cfg.eventDesc || cfg.eventName, mode: 'gff', brands: cleanBrands, selectedBrand, renderFilesByBrand, generateReel: cfg.platforms.includes('reel') })
-        : await generateAsync(files, cfg.eventName, cfg.eventDesc || cfg.eventName)
+        ? await generateFast(files, { eventName: cfg.eventName, eventDescription: cfg.eventDesc || cfg.eventName, mode: 'gff', brands: cleanBrands, selectedBrand, renderFilesByBrand, generateReel: wantsReel })
+        : await generateAsync(files, cfg.eventName, cfg.eventDesc || cfg.eventName, wantsReel)
       setJobId(r.job_id)
       sessionStorage.setItem('ce_active_job_id', r.job_id)
       sessionStorage.setItem('ce_active_job_event', cfg.eventName)

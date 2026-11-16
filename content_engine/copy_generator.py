@@ -151,6 +151,87 @@ def _build_context(
     )
 
 
+# ── Brand context ───────────────────────────────────────────────────────────────
+
+@dataclass
+class BrandContext:
+    """Brand-specific guidance injected into every caption prompt."""
+    brand_name: Optional[str] = None
+    brand_description: Optional[str] = None
+    brand_tone: Optional[str] = None
+    preferred_vocabulary: Optional[List[str]] = None
+    avoided_words: Optional[List[str]] = None
+    campaign_objective: Optional[str] = None
+    campaign_description: Optional[str] = None
+    audience: Optional[str] = None
+
+    def summary(self) -> str:
+        """Return a compact, non-null brand context block for prompting."""
+        parts: List[str] = []
+        if self.brand_name:
+            parts.append(f"Brand: {self.brand_name}")
+        if self.brand_description:
+            parts.append(f"Brand description: {self.brand_description}")
+        if self.brand_tone:
+            parts.append(f"Brand tone: {self.brand_tone}")
+        if self.preferred_vocabulary:
+            parts.append(f"Preferred vocabulary: {', '.join(self.preferred_vocabulary[:8])}")
+        if self.avoided_words:
+            parts.append(f"Avoid these words/phrases: {', '.join(self.avoided_words[:8])}")
+        if self.campaign_objective:
+            parts.append(f"Campaign objective: {self.campaign_objective}")
+        if self.campaign_description:
+            parts.append(f"Campaign description: {self.campaign_description}")
+        if self.audience:
+            parts.append(f"Target audience: {self.audience}")
+        return "\n".join(f"- {p}" for p in parts) if parts else "No brand context available."
+
+
+# ── Placeholder validation ──────────────────────────────────────────────────────
+
+_PLACEHOLDER_RE = re.compile(r"[\[{]\s*[a-zA-Z_][a-zA-Z0-9_]*\s*[\]}]")
+
+
+def detect_placeholders(text: str) -> List[str]:
+    """Return unresolved template placeholders like [date], {brand_name}, [industry]."""
+    return _PLACEHOLDER_RE.findall(text or "")
+
+
+def strip_placeholders(text: str) -> str:
+    """Remove unresolved placeholder tokens, collapsing surrounding whitespace."""
+    cleaned = _PLACEHOLDER_RE.sub("", text or "")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
+def validate_no_placeholders(text: str) -> Dict[str, object]:
+    """Validate that text contains no unresolved placeholders.
+
+    Returns {"valid": bool, "placeholders": List[str], "cleaned": str}
+    """
+    found = detect_placeholders(text)
+    return {
+        "valid": len(found) == 0,
+        "placeholders": found,
+        "cleaned": strip_placeholders(text) if found else text,
+    }
+
+
+# ── Generation metadata ─────────────────────────────────────────────────────────
+
+@dataclass
+class GenerationMetadata:
+    provider: str
+    model: str
+    model_path: str
+    operation: str
+    inference_occurred: bool
+    fallback_reason: Optional[str] = None
+    validation: Optional[Dict[str, object]] = None
+    device: Optional[str] = None
+    duration_s: Optional[float] = None
+
+
 # ── Groq client ───────────────────────────────────────────────────────────────
 
 class _GroqGenerator:
@@ -471,6 +552,8 @@ class CopyGenerator:
                   read from GROQ_API_KEY env var via the provider factory).
         llm_provider: optional pre-constructed LLMProvider. If not provided,
                       the factory selects one based on AI_EXECUTION_MODE.
+        brand_context: optional BrandContext with brand/campaign guidance injected
+                       into every caption prompt.
     """
 
     def __init__(
@@ -478,11 +561,40 @@ class CopyGenerator:
         use_llm: bool = True,
         groq_key: Optional[str] = None,
         llm_provider: Optional[LLMProvider] = None,
+        brand_context: Optional[BrandContext] = None,
     ):
         self._groq = None  # Groq handled through provider, not direct client
         self._provider = llm_provider or get_llm_provider()
         self._mlx_client = None
         self._mlx_errors = None
+        self._brand_context = brand_context or BrandContext()
+        self._last_metadata: Optional[GenerationMetadata] = None
+
+    @property
+    def last_metadata(self) -> Optional[GenerationMetadata]:
+        """Metadata from the most recent generation call."""
+        return self._last_metadata
+
+    def _record_metadata(
+        self,
+        operation: str,
+        inference_occurred: bool,
+        fallback_reason: Optional[str] = None,
+        validation: Optional[Dict[str, object]] = None,
+        duration_s: Optional[float] = None,
+    ) -> None:
+        provider = self._provider
+        self._last_metadata = GenerationMetadata(
+            provider=provider.name,
+            model=getattr(provider, "MODEL", "Qwen2.5-1.5B-Instruct"),
+            model_path=getattr(provider, "MODEL_PATH", str(QWEN_MODEL_PATH)),
+            operation=operation,
+            inference_occurred=inference_occurred,
+            fallback_reason=fallback_reason,
+            validation=validation,
+            device=getattr(provider, "device", "cpu"),
+            duration_s=duration_s,
+        )
 
     def _generate(
         self,
@@ -491,22 +603,39 @@ class CopyGenerator:
         correction: str = "",
         system_prompt: Optional[str] = None,
         operation: str = "caption",
+        brand_context: Optional[BrandContext] = None,
+        validate_placeholders: bool = True,
+        max_correction_attempts: int = 2,
     ) -> str:
         """Generate text using the local Qwen provider.
 
         Routes exclusively through TorchLocalProvider (Qwen2.5-1.5B-Instruct,
         models/qwen/). No cloud fallback, no template substitution on failure.
+
+        If validate_placeholders is true and unresolved placeholders are
+        detected, a bounded correction/regeneration is attempted (up to
+        max_correction_attempts) before returning the cleaned output.
         """
+        ctx = brand_context or self._brand_context
+
+        # Prepend brand context to the user prompt when available
+        brand_block = ctx.summary()
+        if brand_block and brand_block != "No brand context available.":
+            prompt = f"{brand_block}\n\n{prompt}"
+
         if correction:
             prompt = f"{prompt}\n\nRetry constraint: {correction}"
 
         system = system_prompt or (
             "You write concise, accurate social media copy. Follow the user request exactly. "
-            "Use only supplied facts. Never emit instructions, analysis, or placeholders."
+            "Use only supplied facts. Never emit instructions, analysis, or placeholders. "
+            "Never invent dates, statistics, or event facts not supplied in the context."
         )
 
         provider = self._provider
         t0 = time.perf_counter()
+        inference_occurred = False
+        output = ""
         try:
             output = provider.generate(
                 system=system,
@@ -514,9 +643,43 @@ class CopyGenerator:
                 max_tokens=max_new_tokens,
                 temperature=0.0,  # Deterministic for factual copy
             )
+            inference_occurred = True
             if not output:
                 raise RuntimeError("Provider returned empty output")
+
+            # Placeholder validation with bounded correction
+            if validate_placeholders:
+                for attempt in range(max_correction_attempts + 1):
+                    validation = validate_no_placeholders(output)
+                    if validation["valid"]:
+                        break
+                    if attempt < max_correction_attempts:
+                        correction_msg = (
+                            f"The previous output contained unresolved template placeholders: "
+                            f"{', '.join(validation['placeholders'])}. "
+                            f"Regenerate without any bracketed or brace-enclosed placeholders. "
+                            f"If a detail is missing, rephrase naturally to omit it — never invent dates, "
+                            f"numbers, or event facts. Do not use [ ] or {{ }} tokens."
+                        )
+                        output = provider.generate(
+                            system=system,
+                            user=f"{prompt}\n\nRetry constraint: {correction_msg}",
+                            max_tokens=max_new_tokens,
+                            temperature=0.0,
+                        )
+                        if not output:
+                            break
+                else:
+                    # Final fallback: strip any remaining placeholders
+                    output = strip_placeholders(output)
+
             duration = time.perf_counter() - t0
+            self._record_metadata(
+                operation=operation,
+                inference_occurred=inference_occurred,
+                validation=validate_no_placeholders(output) if validate_placeholders else None,
+                duration_s=round(duration, 4),
+            )
             _log.info(
                 "llm_generation_ok",
                 provider=provider.name,
@@ -527,10 +690,17 @@ class CopyGenerator:
                 duration_s=round(duration, 4),
                 max_tokens=max_new_tokens,
                 success=True,
+                inference_occurred=True,
             )
             return output
         except Exception as e:
             duration = time.perf_counter() - t0
+            self._record_metadata(
+                operation=operation,
+                inference_occurred=inference_occurred,
+                fallback_reason=str(e),
+                duration_s=round(duration, 4),
+            )
             _log.error(
                 "llm_generation_failed",
                 provider=provider.name,
@@ -556,30 +726,41 @@ class CopyGenerator:
         selections: List[AssetMetadata],
         event_description: str = "",
         num_story_frames: int = 4,
+        brand_context: Optional[BrandContext] = None,
     ) -> Optional[Dict[str, object]]:
         """
-        Generate all platform captions in a single MLX call (2-3x faster).
-        Returns None if MLX unavailable or JSON parsing fails.
+        Generate all platform captions in a single Qwen call (2-3x faster).
+        Returns None if Qwen unavailable or JSON parsing fails.
         """
         try:
             ctx = _build_context(event_name, selections, event_description)
+            brand_ctx = brand_context or self._brand_context
+            brand_block = brand_ctx.summary()
+
+            concepts_str = ", ".join(ctx.detected_concepts[:5]) or "networking and keynotes"
+            scenes_str = ", ".join(ctx.scene_labels[:5])
+
             prompt = f"""You are a content creator who just attended {ctx.event_name}.
 
+BRAND CONTEXT:
+{brand_block}
+
 EVENT CONTEXT:
+- Event: {ctx.event_name}
 - Description: {ctx.event_description}
 - Event type: {ctx.event_type}
-- Key themes detected from photos: {', '.join(ctx.detected_concepts[:5]) or 'networking and keynotes'}
+- Key themes detected from photos: {concepts_str}
 - {ctx.total_faces} people visibly engaged
-- Scene labels: {', '.join(ctx.scene_labels[:5])}
+- Scene labels: {scenes_str}
 
 Generate captions for all platforms below. Return ONLY valid JSON.
 
 {{
-  "linkedin": "Professional LinkedIn post, first person, 150-220 words, no emojis, specific observations from event, end with question. Include {ctx.hashtag} and 2 hashtags.",
+  "linkedin": "Professional LinkedIn post, first person, 150-250 words, no emojis, specific observations from the event, end with a question. Include {ctx.hashtag} and 2 hashtags. No bracketed placeholders. Never invent dates or facts.",
 
-  "instagram": "Instagram carousel caption, casual lowercase, 3-5 lines, 2-3 emojis, end with CTA. Include {ctx.hashtag} and 2-3 hashtags.",
+  "instagram": "Instagram carousel caption, casual lowercase, 3-5 lines, 2-3 emojis, end with a CTA. Include {ctx.hashtag} and 2-3 hashtags. No bracketed placeholders.",
 
-  "reel": "Instagram Reel caption, very short 15-25 words, energetic, 1-2 emojis, tag CTA. Include {ctx.hashtag}.",
+  "reel": "Instagram Reel caption, very short 15-25 words, energetic, 1-2 emojis, tag CTA. Include {ctx.hashtag}. No bracketed placeholders.",
 
   "stories": ["Story 1 caption (5-10 words)", "Story 2 caption (5-10 words)", "Story 3 caption (5-10 words)", "Story 4 caption (5-10 words)"]
 }}
@@ -588,7 +769,7 @@ Follow this brand voice: Clear over clever. Active over passive. Specific over v
 
 Return ONLY valid JSON with no markdown formatting, no code blocks, no explanation:"""
 
-            raw = self._generate(prompt, max_new_tokens=800, operation="batch")
+            raw = self._generate(prompt, max_new_tokens=900, brand_context=brand_ctx, operation="batch")
             cleaned = raw.strip()
             if cleaned.startswith("```"):
                 cleaned = cleaned.split("\n", 1)[-1]
@@ -600,6 +781,13 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
                 # shortfall to the caller so it can decide how to respond.
                 return None
             result["stories"] = [str(s) for s in stories[:num_story_frames]]
+            # Validate placeholders in all outputs
+            for key in ("linkedin", "instagram", "reel"):
+                val = result.get(key)
+                if isinstance(val, str):
+                    v = validate_no_placeholders(val)
+                    if not v["valid"]:
+                        result[key] = v["cleaned"]
             _log.info("batch_captions_done", platforms=", ".join(result.keys()))
             return result
         except Exception as e:
@@ -614,18 +802,64 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         assets: List[AssetMetadata],
         event_description: str = "",
         correction: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> str:
-        desc = event_description or event_name
-        prompt = f"Fact record: {_compact_prompt_facts(desc)}. Write one factual LinkedIn announcement sentence of at most 35 words."
-        system_prompt = (
-            "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. "
-            "Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. "
-            "Never use bracketed fill-ins. Follow the supplied brand tone and restrictions."
+        """Generate a contextual LinkedIn post via Qwen.
+
+        Includes brand voice, event details, detected visual concepts, audience,
+        and platform requirements. Never emits bracketed placeholders.
+        """
+        ctx = _build_context(event_name, assets, event_description)
+        brand_ctx = brand_context or self._brand_context
+        brand_block = brand_ctx.summary()
+
+        concepts_str = ", ".join(ctx.detected_concepts[:6]) if ctx.detected_concepts else "professional event moments"
+        scenes_str = ", ".join(ctx.scene_labels[:5]) if ctx.scene_labels else "the event"
+        faces_line = (
+            f"About {ctx.total_faces} people were visibly engaged in key shots."
+            if ctx.total_faces > 0 else ""
         )
-        prompt += " No hashtags unless the brand guidance asks for them."
+        event_type_hint = {
+            "award_ceremony": "This was an awards ceremony — focus on recognition, achievement, and the emotional weight of the room.",
+            "keynote": "This was a keynote-heavy event — focus on ideas, insights, and what the speaker said that stuck.",
+            "networking": "This was a networking event — focus on conversations, connections, and the energy between people.",
+            "workshop": "This was a workshop — focus on learning, hands-on moments, and practical takeaways.",
+        }.get(ctx.event_type, "This was a professional event.")
+
+        prompt = f"""You attended {ctx.event_name} and are writing a LinkedIn post about it.
+
+BRAND CONTEXT:
+{brand_block}
+
+EVENT CONTEXT:
+- Event: {ctx.event_name}
+- Description: {ctx.event_description}
+- {event_type_hint}
+- Visual themes detected in photos: {scenes_str}
+- Key concepts: {concepts_str}
+- {faces_line}
+
+PLATFORM REQUIREMENTS (LinkedIn):
+- Write in FIRST PERSON as if you genuinely attended
+- Professional, insightful, evidence-led tone
+- Be specific — reference actual observations from the context above
+- NO "thrilled to announce", NO "excited to share", NO corporate filler
+        - NO bracketed fill-ins like [date], [industry], {{brand_name}}, etc.
+- Never invent dates, statistics, or event facts
+- Structure: opening observation → 2-3 specific insights → closing question
+- End with a genuine question that invites engagement
+- 150-250 words
+- Include {ctx.hashtag} and 2 relevant hashtags at the end
+- No emojis in the body text
+
+Write the LinkedIn post (no title, no preamble, just the post):"""
+
         try:
             return self._generate(
-                prompt, max_new_tokens=72, correction=correction, system_prompt=system_prompt,
+                prompt,
+                max_new_tokens=450,
+                correction=correction,
+                brand_context=brand_ctx,
                 operation="linkedin",
             )
         except Exception as e:
@@ -639,18 +873,47 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         assets: List[AssetMetadata],
         event_description: str = "",
         correction: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> str:
-        desc = event_description or event_name
-        prompt = f"Fact record: {_compact_prompt_facts(desc)}. Write one factual Instagram caption sentence of at most 24 words."
-        system_prompt = (
-            "Write exactly one plain sentence and no explanation. Use only information stated in the supplied fact record. "
-            "Do not infer or add any detail absent from that record. Include a call to action only when one is explicitly supplied. "
-            "Never use bracketed fill-ins. Follow the supplied brand tone and restrictions."
-        )
-        prompt += " No hashtags unless the brand guidance asks for them."
+        """Generate a contextual Instagram carousel caption via Qwen."""
+        ctx = _build_context(event_name, assets, event_description)
+        brand_ctx = brand_context or self._brand_context
+        brand_block = brand_ctx.summary()
+
+        concepts_str = ", ".join(ctx.detected_concepts[:4]) if ctx.detected_concepts else "the event"
+        scenes_str = ", ".join(ctx.scene_labels[:4]) if ctx.scene_labels else "the event"
+
+        prompt = f"""You attended {ctx.event_name} and are writing an Instagram carousel caption.
+
+BRAND CONTEXT:
+{brand_block}
+
+EVENT CONTEXT:
+- Event: {ctx.event_name}
+- Description: {ctx.event_description}
+- Visual themes: {scenes_str}
+- Key concepts: {concepts_str}
+- Crowd: {ctx.total_faces} faces in key shots
+- Event type: {ctx.event_type}
+
+PLATFORM REQUIREMENTS (Instagram):
+- Casual, lowercase, conversational — NOT corporate
+- 3-5 short punchy lines
+- 2-3 emojis used naturally (not forced)
+- End with a CTA: "swipe →", "save this", or "tag someone"
+        - NO bracketed fill-ins like [date], [industry], {{brand_name}}, etc.
+- Never invent dates, statistics, or event facts
+- Include {ctx.hashtag} and 2-3 relevant hashtags
+- Max 100 words
+
+Write the Instagram caption:"""
+
         try:
             return self._generate(
-                prompt, max_new_tokens=40, correction=correction, system_prompt=system_prompt,
+                prompt,
+                max_new_tokens=200,
+                correction=correction,
+                brand_context=brand_ctx,
                 operation="instagram",
             )
         except Exception as e:
@@ -663,16 +926,46 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         event_name: str,
         assets: List[AssetMetadata],
         event_description: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> str:
+        """Generate a contextual Instagram Reel caption via Qwen."""
+        ctx = _build_context(event_name, assets, event_description)
+        brand_ctx = brand_context or self._brand_context
+        brand_block = brand_ctx.summary()
+
         concepts = _top_concepts(assets)
-        desc = event_description or event_name
-        prompt = (
-            f"Write a short Instagram Reel caption (max 40 words) for '{event_name}'. "
-            f"Context: {desc}. Visuals: {', '.join(concepts) or 'highlights'}. "
-            f"Energetic and punchy, ends with a tag CTA. Include 1-2 hashtags. Grounded in content."
-        )
+        concept_str = ", ".join(concepts) if concepts else "event highlights"
+        clips_line = f"{ctx.video_highlight_count} highlight clips extracted." if ctx.video_highlight_count else ""
+
+        prompt = f"""Write a short Instagram Reel caption for {ctx.event_name}.
+
+BRAND CONTEXT:
+{brand_block}
+
+CONTEXT:
+- Event: {ctx.event_name}
+- Description: {ctx.event_description}
+- Visual themes: {concept_str}
+- {clips_line}
+
+PLATFORM REQUIREMENTS (Instagram Reel):
+- Very short: 15-25 words max
+- Energetic, punchy
+- 1-2 emojis
+- End with a question or "tag someone" CTA
+        - NO bracketed fill-ins like [date], [industry], {{brand_name}}, etc.
+- Never invent dates or event facts
+- Include {ctx.hashtag}
+
+Write only the caption:"""
+
         try:
-            return self._generate(prompt, max_new_tokens=80, operation="reel")
+            return self._generate(
+                prompt,
+                max_new_tokens=100,
+                brand_context=brand_ctx,
+                operation="reel",
+            )
         except Exception as e:
             raise RuntimeError(f"LLM inference failed: {e}")
 
@@ -684,22 +977,42 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         num_slides: int = 4,
         assets: Optional[List[AssetMetadata]] = None,
         event_description: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> List[str]:
-        concepts = _top_concepts(assets or [])
-        prompt = (
-            f"Write {num_slides} sequential Instagram Story captions for {event_name}. "
-            f"Event details: {event_description or event_name}. Visual concepts: {', '.join(concepts) or 'not provided'}. "
-            "Use only supplied facts. Each caption should be short and mobile-readable; add a CTA to the last. "
-            "Return captions separated by |."
-        )
-        try:
-            result = self._generate(prompt, max_new_tokens=max(32, num_slides * 32))
+        """Generate sequential Instagram Story captions via Qwen."""
+        ctx = _build_context(event_name, assets or [], event_description)
+        brand_ctx = brand_context or self._brand_context
+        brand_block = brand_ctx.summary()
 
-            # Parse real model output robustly. Local LLMs may not honor the
-            # "|" separator instruction, so accept newline-separated (optionally
-            # numbered) captions as well. This never fabricates captions — it
-            # only splits the actual generated text; a template pad is applied
-            # only when the model genuinely returns fewer than requested.
+        concepts_str = ", ".join(ctx.detected_concepts[:3]) if ctx.detected_concepts else "the event"
+
+        prompt = f"""Write {num_slides} sequential Instagram Story captions for {ctx.event_name}.
+
+BRAND CONTEXT:
+{brand_block}
+
+These are sequential frames telling a story arc: arrival → main event → highlight → sign-off.
+Event context: {ctx.event_description}
+Themes: {concepts_str}
+
+PLATFORM REQUIREMENTS (Instagram Stories):
+- Each caption: 5-10 words only
+- Casual, emoji-friendly
+- Tell a narrative arc across the {num_slides} frames
+- Number each one: "1.", "2.", etc.
+        - NO bracketed fill-ins like [date], [industry], {{brand_name}}, etc.
+- Never invent dates or event facts
+
+Write the {num_slides} captions:"""
+
+        try:
+            result = self._generate(
+                prompt,
+                max_new_tokens=max(64, num_slides * 32),
+                brand_context=brand_ctx,
+                operation="stories",
+            )
+
             raw_parts = [part.strip() for part in result.split("|") if part.strip()]
             if len(raw_parts) < num_slides:
                 lines = [ln.strip() for ln in result.splitlines() if ln.strip()]
@@ -729,46 +1042,89 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         assets: List[AssetMetadata],
         n: int = 3,
         event_description: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> Dict[str, object]:
         """
         Generate n caption variants for a platform.
+        All variants are produced by Qwen — no hardcoded templates.
         Returns {"primary": str, "variants": [str, ...], "backend": str}
         """
+        brand_ctx = brand_context or self._brand_context
         tag = _hashtag(event_name)
         concepts = _top_concepts(assets, 2)
         concept_str = f" ({', '.join(concepts)})" if concepts else ""
 
         if platform == "linkedin":
-            primary = self.generate_linkedin_caption(event_name, assets, event_description)
-            # Template variants (provider-based variants can be added via Groq provider directly)
-            v1 = (f"Three questions {event_name} left me with:\n\n"
-                  f"1. Why does the hallway conversation always beat the keynote?\n"
-                  f"2. What would change if we applied this to our own team?\n"
-                  f"3. Who in this room is doing the most interesting work nobody's talking about?\n\n"
-                  f"Still processing. More soon.\n\n{tag} #EventInsights")
-            v2 = (f"The honest recap of {event_name}{concept_str}:\n\n"
-                  f"What I expected: polished presentations and networking small talk.\n"
-                  f"What I got: one conversation that changed how I think about the problem.\n\n"
-                  f"That's the ROI of showing up in person.\n\n{tag} #Leadership")
-            return {"primary": primary, "variants": [v1, v2][:n-1], "backend": self.backend}
+            primary = self.generate_linkedin_caption(event_name, assets, event_description, brand_context=brand_ctx)
+            variants: List[str] = []
+            v1_prompt = (
+                f"Write a LinkedIn post about {event_name} structured as 3 honest questions "
+                f"the event left you with. Start with 'Three questions {event_name} left me with:'. "
+                f"Each question thought-provoking and specific to a professional event. "
+                f"End with 'Still processing.' Include {tag} #EventInsights. Max 120 words. "
+                f"No bracketed placeholders. Never invent dates or facts."
+            )
+            v2_prompt = (
+                f"Write a LinkedIn post about {event_name} structured as 'what I expected vs what I got'. "
+                f"Format: 'What I expected: [something specific]. What I got: [something specific and insightful].' "
+                f"End with a line about the ROI of showing up in person. Include {tag} #Leadership. "
+                f"Max 100 words. No bracketed placeholders. Never invent dates or facts."
+            )
+            try:
+                variants.append(self._generate(v1_prompt, max_new_tokens=200, brand_context=brand_ctx, operation="linkedin-variant"))
+            except Exception:
+                pass
+            try:
+                variants.append(self._generate(v2_prompt, max_new_tokens=180, brand_context=brand_ctx, operation="linkedin-variant"))
+            except Exception:
+                pass
+            return {"primary": primary, "variants": variants[:n - 1], "backend": self.backend}
 
         elif platform == "instagram":
-            primary = self.generate_instagram_caption(event_name, assets, event_description)
-            v1 = (f"things that happened at {event_name} that the official recap won't mention 🧵\n\n"
-                  f"→ the conversation that started at the coffee station and ended 2 hours later\n"
-                  f"→ the speaker who went off-script and said the thing everyone was thinking\n"
-                  f"→ the moment the room actually woke up\n\n"
-                  f"save this if you're going next year 📌\n\n{tag} #EventLife")
-            v2 = (f"rate this event experience out of 10 👇\n\n"
-                  f"content: 9/10\nnetworking: 8/10\ncoffee: honestly 7/10\n"
-                  f"that one conversation: 11/10\n\n{tag} #ConferenceLife #NetworkingIRL")
-            return {"primary": primary, "variants": [v1, v2][:n-1], "backend": self.backend}
+            primary = self.generate_instagram_caption(event_name, assets, event_description, brand_context=brand_ctx)
+            variants = []
+            v1_prompt = (
+                f"Write an Instagram caption for {event_name} as a 'things that happened that the official recap won't mention' thread. "
+                f"Use → bullet points for 3 specific moments. End with 'save this if you're going next year 📌'. "
+                f"Include {tag} #EventLife. Max 80 words. No bracketed placeholders."
+            )
+            v2_prompt = (
+                f"Write an Instagram caption for {event_name} as a 'rate this event' post. "
+                f"Rate: content, networking, coffee, and one unexpected thing — each out of 10. "
+                f"Funny and relatable tone. Include {tag} #ConferenceLife. Max 60 words. No bracketed placeholders."
+            )
+            try:
+                variants.append(self._generate(v1_prompt, max_new_tokens=150, brand_context=brand_ctx, operation="instagram-variant"))
+            except Exception:
+                pass
+            try:
+                variants.append(self._generate(v2_prompt, max_new_tokens=120, brand_context=brand_ctx, operation="instagram-variant"))
+            except Exception:
+                pass
+            return {"primary": primary, "variants": variants[:n - 1], "backend": self.backend}
 
         else:  # reel
-            primary = self.generate_reel_caption(event_name, assets, event_description)
-            v1 = f"we documented everything at {event_name} 🎬 watch till the end\n\n{tag}"
-            v2 = f"this is what {event_name} actually looked like 👀\n\n{tag} #BehindTheScenes"
-            return {"primary": primary, "variants": [v1, v2][:n-1], "backend": self.backend}
+            primary = self.generate_reel_caption(event_name, assets, event_description, brand_context=brand_ctx)
+            variants = []
+            v1_prompt = (
+                f"Write a short Instagram Reel caption for {event_name}. "
+                f"Energetic, punchy, 15-25 words max. End with 'tag someone who needs to see this'. "
+                f"Include {tag} #BehindTheScenes. No bracketed placeholders."
+            )
+            v2_prompt = (
+                f"Write a short Instagram Reel caption for {event_name}. "
+                f"Hook in the first line. 3-4 short lines max. End with a tag CTA. "
+                f"Include {tag} #EventReel. No bracketed placeholders."
+            )
+            try:
+                variants.append(self._generate(v1_prompt, max_new_tokens=80, brand_context=brand_ctx, operation="reel-variant"))
+            except Exception:
+                pass
+            try:
+                variants.append(self._generate(v2_prompt, max_new_tokens=80, brand_context=brand_ctx, operation="reel-variant"))
+            except Exception:
+                pass
+            return {"primary": primary, "variants": variants[:n - 1], "backend": self.backend}
 
     # ── Brand-aware captions (GFF 2025 challenge) ──────────────────────────────
 
@@ -778,19 +1134,24 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         event_name: str,
         assets: List[AssetMetadata],
         event_description: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> str:
         """
         Generate Instagram carousel caption with brand awareness.
         Follows StepOne brand voice: clear, active, specific, confident, human.
         """
+        brand_ctx = brand_context or BrandContext(brand_name=brand_name)
         concepts = _top_concepts(assets, 3)
         concept_str = ", ".join(concepts) if concepts else "highlights"
 
         try:
             ctx = _build_context(event_name, assets, event_description)
-            ctx.event_name = f"{brand_name} at {event_name}"
+            brand_block = brand_ctx.summary()
 
             prompt = f"""You are writing an Instagram carousel caption for {brand_name}.
+
+BRAND CONTEXT:
+{brand_block}
 
 BRAND VOICE REQUIREMENTS:
 - Clear over clever — earn trust with precision
@@ -813,10 +1174,12 @@ REQUIREMENTS:
 - Include {ctx.hashtag} + 2-3 relevant hashtags
 - Max 100 words
 - NOT a LinkedIn repost — Instagram native tone
+- No bracketed placeholders like [date], {brand_name}, etc.
+- Never invent dates or event facts
 
 Write the caption:"""
 
-            result = self._generate(prompt, max_new_tokens=180, operation="brand-carousel")
+            result = self._generate(prompt, max_new_tokens=180, brand_context=brand_ctx, operation="brand-carousel")
             _log.info("brand_carousel_caption_done", brand=brand_name, chars=len(result))
 
             # Validate against brand voice
@@ -834,15 +1197,23 @@ Write the caption:"""
         event_name: str,
         assets: List[AssetMetadata],
         event_description: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> str:
         """
         Generate Instagram Reel caption with brand awareness.
         30-60 second reel, sequenced storytelling.
         """
+        brand_ctx = brand_context or BrandContext(brand_name=brand_name)
         concepts = _top_concepts(assets, 2)
 
         try:
+            ctx = _build_context(event_name, assets, event_description)
+            brand_block = brand_ctx.summary()
+
             prompt = f"""Write an Instagram Reel caption for {brand_name} at {event_name}.
+
+BRAND CONTEXT:
+{brand_block}
 
 BRAND VOICE:
 - Clear over clever, active over passive, specific over vague
@@ -863,10 +1234,12 @@ REQUIREMENTS:
 - Include 2-3 hashtags
 - Max 60 words
 - Instagram native — NOT corporate or LinkedIn style
+- No bracketed placeholders like [date], {brand_name}, etc.
+- Never invent dates or event facts
 
 Write the caption:"""
 
-            result = self._generate(prompt, max_new_tokens=120, operation="brand-reel")
+            result = self._generate(prompt, max_new_tokens=120, brand_context=brand_ctx, operation="brand-reel")
             _log.info("brand_reel_caption_done", brand=brand_name, chars=len(result))
             return result
         except Exception as e:
@@ -879,15 +1252,23 @@ Write the caption:"""
         num_slides: int = 4,
         assets: Optional[List[AssetMetadata]] = None,
         event_description: str = "",
+        brand_context: Optional[BrandContext] = None,
     ) -> List[str]:
         """
         Generate sequential story captions with brand awareness.
         3-4 vertical frames that lead into each other.
         """
+        brand_ctx = brand_context or BrandContext(brand_name=brand_name)
         concepts = _top_concepts(assets, 3) if assets else []
 
         try:
+            ctx = _build_context(event_name, assets or [], event_description)
+            brand_block = brand_ctx.summary()
+
             prompt = f"""Write {num_slides} sequential Instagram Story captions for {brand_name} at {event_name}.
+
+BRAND CONTEXT:
+{brand_block}
 
 BRAND VOICE:
 - Clear over clever, active over passive, specific over vague
@@ -910,10 +1291,12 @@ REQUIREMENTS:
 - End with clear CTA in final frame
 - No hashtags needed for stories (optional)
 - Total: {num_slides} captions, one per line, separated by |
+- No bracketed placeholders like [date], {brand_name}, etc.
+- Never invent dates or event facts
 
 Write the story captions (format: frame1 | frame2 | frame3 | frame4):"""
 
-            result = self._generate(prompt, max_new_tokens=200, operation="brand-stories")
+            result = self._generate(prompt, max_new_tokens=200, brand_context=brand_ctx, operation="brand-stories")
 
             # Split by | delimiter
             captions = [c.strip() for c in result.split("|")][:num_slides]

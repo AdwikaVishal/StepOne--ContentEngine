@@ -1020,6 +1020,7 @@ async def run_generate_async(
     files: List[UploadFile] = File(...),
     event_name: str = Form("Event"),
     event_description: str = Form("Event"),
+    generate_reel: bool = Form(False),
 ):
     """
     Submit full generation job. Returns job_id immediately (<500ms).
@@ -1029,7 +1030,7 @@ async def run_generate_async(
 
     # Use APScheduler in-memory by default
     from api.scheduler import submit_generate_job
-    job_id = submit_generate_job(paths, event_name, event_description)
+    job_id = submit_generate_job(paths, event_name, event_description, generate_reel=generate_reel)
     return {"job_id": job_id, "status": "pending", "backend": "apscheduler"}
 
 

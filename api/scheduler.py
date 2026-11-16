@@ -21,7 +21,7 @@ import json
 import time
 import threading
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from concurrent.futures import ThreadPoolExecutor
 
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -129,14 +129,15 @@ def submit_generate_job(
     asset_paths: list,
     event_name: str = "Event",
     event_description: str = "Event",
+    generate_reel: bool = False,
 ) -> str:
     """
     Submit a full content generation job.
     Returns job_id immediately; job runs in background thread.
     """
-    job_id = _new_job("generate", asset_paths, event_name=event_name, event_description=event_description)
-    _executor.submit(_run_generate, job_id, asset_paths, event_name, event_description)
-    logger.info("job_submitted", job_id=job_id, type="generate", assets=len(asset_paths))
+    job_id = _new_job("generate", asset_paths, event_name=event_name, event_description=event_description, generate_reel=generate_reel)
+    _executor.submit(_run_generate, job_id, asset_paths, event_name, event_description, generate_reel)
+    logger.info("job_submitted", job_id=job_id, type="generate", assets=len(asset_paths), generate_reel=generate_reel)
     return job_id
 
 
@@ -216,7 +217,7 @@ def get_job_threshold(job_id: str, default: float = 0.60) -> float:
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
-def _new_job(job_type: str, asset_paths: list = None, event_name: str = "", event_description: str = "") -> str:
+def _new_job(job_type: str, asset_paths: list = None, event_name: str = "", event_description: str = "", generate_reel: bool = False) -> str:
     job_id = uuid.uuid4().hex
     from pathlib import Path
     initial_assets = []
@@ -230,6 +231,7 @@ def _new_job(job_type: str, asset_paths: list = None, event_name: str = "", even
                 "scene_concepts": [],
                 "face_count": 0,
             })
+    video_count = sum(1 for p in (asset_paths or []) if Path(p).suffix.lower() in {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".qt", ".wmv", ".flv", ".f4v", ".mpg", ".mpeg", ".mpe", ".m2v", ".m2ts", ".mts", ".ts", ".3gp", ".3g2", ".ogv", ".asf", ".divx", ".dv", ".vob"})
     job_data = {
         "job_id":     job_id,
         "type":       job_type,
@@ -240,6 +242,9 @@ def _new_job(job_type: str, asset_paths: list = None, event_name: str = "", even
         "assets":     initial_assets,
         "event_name": event_name,
         "event_description": event_description,
+        "generate_reel": generate_reel,
+        "video_count": video_count,
+        "reel_status": "not_requested" if not generate_reel else "pending",
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
     }
@@ -355,6 +360,7 @@ def _run_generate(
     asset_paths: list,
     event_name: str,
     event_description: str,
+    generate_reel: bool = False,
 ) -> None:
     """Background thread: run full content generation."""
     import shutil
@@ -390,6 +396,9 @@ def _run_generate(
                     "aesthetic_score": metadata.aesthetic_score,
                     "scene_concepts": metadata.scene_concepts,
                     "face_count": metadata.face_count,
+                    "asset_type": metadata.asset_type,
+                    "duration": metadata.duration,
+                    "highlight_clips": metadata.highlight_clips or [],
                 })
             else:
                 all_processed_assets.append({
@@ -401,9 +410,14 @@ def _run_generate(
                     "aesthetic_score": 0.0,
                     "scene_concepts": [],
                     "face_count": 0,
+                    "asset_type": "image",
+                    "duration": 0.0,
+                    "highlight_clips": [],
                 })
         
         _update(job_id, assets=all_processed_assets)
+
+        video_count = sum(1 for a in all_processed_assets if a.get("asset_type") == "video")
 
         orch = ContentOrchestrator(
             event_name=event_name,
@@ -411,7 +425,11 @@ def _run_generate(
         )
 
         _update(job_id, progress={"step": "layout_assembly", "pct": 50})
-        out_dir = orch.run(str(tmp_dir), output_root=str(settings.output_dir))
+        out_dir = orch.run(
+            str(tmp_dir),
+            output_root=str(settings.output_dir),
+            generate_reel=generate_reel,
+        )
 
         _update(job_id, progress={"step": "finalising", "pct": 90})
 
@@ -433,6 +451,37 @@ def _run_generate(
                 except Exception:
                     pass
 
+        # Determine reel status for the frontend.
+        # Prefer the reel_status.json sidecar written by the orchestrator, which
+        # carries precise error info (ffmpeg_unavailable, no_highlight_clips,
+        # no_video_assets). Fall back to checking for the reel output file.
+        reel_url = output_files.get("instagram_reel.mp4")
+        reel_status = "not_requested"
+        reel_error = None
+        try:
+            import json as _json
+            rs_path = Path(out_dir) / "reel_status.json"
+            if rs_path.is_file():
+                rs = _json.loads(rs_path.read_text(encoding="utf-8"))
+                reel_status = rs.get("reel_status", "not_requested")
+                reel_error = rs.get("reel_error")
+                sidecar_url = rs.get("reel_url")
+                if sidecar_url:
+                    reel_url = sidecar_url
+        except Exception:
+            pass
+        if generate_reel and reel_status == "not_requested":
+            reel_status = "generated" if reel_url else "failed"
+
+        # Aggregate scene concepts and face count for caption regeneration context
+        all_concepts: List[str] = []
+        total_faces = 0
+        for a in all_processed_assets:
+            for c in (a.get("scene_concepts") or []):
+                if c not in all_concepts:
+                    all_concepts.append(c)
+            total_faces += int(a.get("face_count") or 0)
+
         _update(
             job_id,
             status="completed",
@@ -440,9 +489,28 @@ def _run_generate(
             result={
                 "status":     "completed",
                 "event":      event_name,
+                "event_description": event_description,
+                "scene_concepts": all_concepts,
+                "face_count": total_faces,
                 "output_dir": str(out_dir.resolve()),
                 "files":      output_files,
                 "captions":   captions,
+                "generate_reel": generate_reel,
+                "reel_status": reel_status,
+                "reel_url": reel_url,
+                "reel_error": reel_error,
+                "video_count": video_count,
+                "video_assets": [
+                    {
+                        "filename": a.get("filename", ""),
+                        "path": a.get("path", ""),
+                        "duration": a.get("duration", 0.0),
+                        "highlight_clips": a.get("highlight_clips", []),
+                        "asset_type": a.get("asset_type", "image"),
+                    }
+                    for a in all_processed_assets
+                    if a.get("asset_type") == "video"
+                ],
             },
             event_name=event_name,
             event_description=event_description,
@@ -450,7 +518,10 @@ def _run_generate(
         logger.info("job_completed", job_id=job_id, type="generate", files=len(output_files))
 
     except Exception as exc:
-        _update(job_id, status="failed", error=str(exc))
+        if generate_reel:
+            _update(job_id, status="failed", error=str(exc), reel_status="failed")
+        else:
+            _update(job_id, status="failed", error=str(exc))
         logger.error("job_failed", job_id=job_id, type="generate", error=str(exc),
                      traceback=traceback.format_exc())
     finally:

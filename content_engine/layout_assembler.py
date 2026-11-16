@@ -15,6 +15,7 @@ Face-aware smart crop uses the already-loaded YOLOv11 face model.
 import subprocess
 import tempfile
 import time
+import shutil
 import cv2
 import numpy as np
 from pathlib import Path
@@ -34,6 +35,16 @@ LINKEDIN_SIZE   = (1080, 1080)   # 1:1
 CAROUSEL_SIZE   = (1080, 1350)   # 4:5
 STORY_SIZE      = (1080, 1920)   # 9:16
 REEL_SIZE       = (1080, 1920)   # 9:16
+
+
+def ffmpeg_available() -> bool:
+    """Return True if the ffmpeg executable is discoverable on PATH."""
+    return shutil.which("ffmpeg") is not None
+
+
+def ffprobe_available() -> bool:
+    """Return True if the ffprobe executable is discoverable on PATH."""
+    return shutil.which("ffprobe") is not None
 
 # Grid layouts keyed by number of images
 _GRID_LAYOUTS: Dict[int, Tuple[int, int]] = {
@@ -435,6 +446,9 @@ class LayoutAssembler:
         """
         # Layout doesn't change reel assembly much right now, but we can expand later
         if not highlight_clips:
+            return False
+
+        if not ffmpeg_available():
             return False
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:

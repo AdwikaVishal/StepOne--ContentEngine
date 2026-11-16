@@ -57,6 +57,18 @@ export interface GenerateResult {
   captions: Record<string, string>
   layouts?: string[]
   status?: string
+  generate_reel?: boolean
+  reel_status?: string
+  reel_url?: string | null
+  reel_error?: string | null
+  video_count?: number
+  video_assets?: Array<{
+    filename: string
+    path: string
+    duration: number
+    highlight_clips: Array<{start:number;end:number;score:number}>
+    asset_type: string
+  }>
 }
 export interface JobStatus      { job_id:string; status:string; progress?:{step?:string;pct?:number}; backend?:string; error?:string|null }
 
@@ -96,7 +108,10 @@ export const analyseContent   = (file:File)                              => { co
 export const extractHighlights= (file:File, dur=45)                     => { const f=new FormData(); f.append('file',file); return api.post<HighlightResult>(`/api/highlights?target_duration=${dur}`,f,{ timeout: TIMEOUT.ai_op }).then(r=>r.data) }
 export const runPipeline      = (files:File[], desc:string)              => api.post<PipelineResult>('/api/pipeline', fd(files,{event_description:desc}), { timeout: TIMEOUT.submit }).then(r=>r.data)
 export const runPipelineAsync = (files:File[], desc:string)              => api.post<{job_id:string;status:string;backend:string}>('/api/pipeline/async', fd(files,{event_description:desc}), { timeout: TIMEOUT.submit }).then(r=>r.data)
-export const generateAsync    = (files:File[], name:string, desc:string) => api.post<{job_id:string;status:string;backend:string}>('/api/generate/async', fd(files,{event_name:name,event_description:desc}), { timeout: TIMEOUT.submit }).then(r=>r.data)
+export const generateAsync = (files:File[], name:string, desc:string, generateReel = false) => {
+  const f = fd(files, { event_name: name, event_description: desc, generate_reel: String(generateReel) })
+  return api.post<{job_id:string;status:string;backend:string}>('/api/generate/async', f, { timeout: TIMEOUT.submit }).then(r=>r.data)
+}
 export const generateFast     = (files:File[], opts:GenerateFastOptions) => {
   const f = fd(files, {
     event_name: opts.eventName,
