@@ -1,0 +1,632 @@
+{
+  "generated_at": "2026-11-10T15:28:58.595357",
+  "note": "Synthetic event photographs with subjects at known positions. BEFORE = centre crop (previous behaviour). AFTER = intelligent subject-aware crop (new engine). Engine driven with controlled FocalAnalysis so subject positions are exact.",
+  "photos": [
+    {
+      "photo": "subject_left",
+      "size": [
+        1200,
+        800
+      ],
+      "subjects": [
+        [
+          [
+            0.0,
+            0.28,
+            0.22,
+            0.72
+          ],
+          [
+            200,
+            60,
+            60
+          ],
+          "SUBJECT"
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_left_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_left_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_left_linkedin_1_1.png",
+          "composition_score": 0.4093195791648609,
+          "before_subject_visibility": 0.242,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            800,
+            800
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_left_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_left_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_left_carousel_4_5.png",
+          "composition_score": 0.43162710777236507,
+          "before_subject_visibility": 0.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            640,
+            800
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            0.5333333333333333,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_left_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_left_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_left_story_9_16.png",
+          "composition_score": 0.45818704799377635,
+          "before_subject_visibility": 0.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            450,
+            800
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            0.375,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_left_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_left_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_left_landscape_16_9.png",
+          "composition_score": 0.3752500215719616,
+          "before_subject_visibility": 1.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            62,
+            1200,
+            737
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0775,
+            1.0,
+            0.92125
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        }
+      ]
+    },
+    {
+      "photo": "subject_right",
+      "size": [
+        1200,
+        800
+      ],
+      "subjects": [
+        [
+          [
+            0.78,
+            0.28,
+            1.0,
+            0.72
+          ],
+          [
+            60,
+            160,
+            90
+          ],
+          "SUBJECT"
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_right_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_right_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_right_linkedin_1_1.png",
+          "composition_score": 0.4093195791648609,
+          "before_subject_visibility": 0.242,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            400,
+            0,
+            1200,
+            800
+          ],
+          "crop_box_norm": [
+            0.3333333333333333,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_right_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_right_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_right_carousel_4_5.png",
+          "composition_score": 0.43162710777236507,
+          "before_subject_visibility": 0.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            560,
+            0,
+            1200,
+            800
+          ],
+          "crop_box_norm": [
+            0.4666666666666667,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_right_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_right_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_right_story_9_16.png",
+          "composition_score": 0.45818704799377635,
+          "before_subject_visibility": 0.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            750,
+            0,
+            1200,
+            800
+          ],
+          "crop_box_norm": [
+            0.625,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_right_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_right_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_right_landscape_16_9.png",
+          "composition_score": 0.3752500215719616,
+          "before_subject_visibility": 1.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            62,
+            1200,
+            737
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0775,
+            1.0,
+            0.92125
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        }
+      ]
+    },
+    {
+      "photo": "subject_top",
+      "size": [
+        1200,
+        800
+      ],
+      "subjects": [
+        [
+          [
+            0.3,
+            0.0,
+            0.7,
+            0.24
+          ],
+          [
+            200,
+            180,
+            40
+          ],
+          "SUBJECT"
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_top_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_top_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_top_linkedin_1_1.png",
+          "composition_score": 0.38717468693722595,
+          "before_subject_visibility": 1.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            200,
+            0,
+            1000,
+            800
+          ],
+          "crop_box_norm": [
+            0.16666666666666666,
+            0.0,
+            0.8333333333333334,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_top_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_top_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_top_carousel_4_5.png",
+          "composition_score": 0.4001346869372259,
+          "before_subject_visibility": 1.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            280,
+            0,
+            920,
+            800
+          ],
+          "crop_box_norm": [
+            0.23333333333333334,
+            0.0,
+            0.7666666666666667,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_top_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_top_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_top_story_9_16.png",
+          "composition_score": 0.40837405701596613,
+          "before_subject_visibility": 0.938,
+          "after_subject_visibility": 0.938,
+          "crop_box": [
+            375,
+            0,
+            825,
+            800
+          ],
+          "crop_box_norm": [
+            0.3125,
+            0.0,
+            0.6875,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\subject_top_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\subject_top_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\subject_top_landscape_16_9.png",
+          "composition_score": 0.387122259524145,
+          "before_subject_visibility": 0.674,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            1200,
+            675
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            1.0,
+            0.84375
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        }
+      ]
+    },
+    {
+      "photo": "group_two",
+      "size": [
+        1200,
+        800
+      ],
+      "subjects": [
+        [
+          [
+            0.04,
+            0.3,
+            0.18,
+            0.7
+          ],
+          [
+            200,
+            60,
+            60
+          ],
+          "A"
+        ],
+        [
+          [
+            0.82,
+            0.3,
+            0.96,
+            0.7
+          ],
+          [
+            60,
+            160,
+            90
+          ],
+          "B"
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\group_two_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\group_two_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\group_two_linkedin_1_1.png",
+          "composition_score": 0.3816875791648609,
+          "before_subject_visibility": 0.095,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            800,
+            800
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\group_two_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\group_two_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\group_two_carousel_4_5.png",
+          "composition_score": 0.39708710777236506,
+          "before_subject_visibility": 0.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            640,
+            800
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            0.5333333333333333,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\group_two_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\group_two_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\group_two_story_9_16.png",
+          "composition_score": 0.40906349243822077,
+          "before_subject_visibility": 0.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            0,
+            450,
+            800
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0,
+            0.375,
+            1.0
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\before\\group_two_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\crops\\after\\group_two_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\visual_acceptance\\compare\\group_two_landscape_16_9.png",
+          "composition_score": 0.3878420215719616,
+          "before_subject_visibility": 1.0,
+          "after_subject_visibility": 1.0,
+          "crop_box": [
+            0,
+            62,
+            1200,
+            737
+          ],
+          "crop_box_norm": [
+            0.0,
+            0.0775,
+            1.0,
+            0.92125
+          ],
+          "faces_preserved": 0,
+          "faces_total": 0,
+          "subjects_preserved": [],
+          "warnings": [
+            "subject_visibility_forced",
+            "Main subject visibility below target; least-destructive crop selected",
+            "No detectable focal region; using composition fallback"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        }
+      ]
+    }
+  ]
+}

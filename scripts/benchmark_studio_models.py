@@ -10,7 +10,26 @@ import argparse
 import json
 import os
 import platform
-import resource
+try:
+    import resource
+except ImportError:  # Windows has no `resource`; approximate peak RSS with psutil.
+    class _ResourceUsage:
+        ru_maxrss = 0
+
+    class _ResourceModule:
+        RUSAGE_SELF = 0
+
+        @staticmethod
+        def getrusage(_who):
+            usage = _ResourceUsage()
+            try:
+                import psutil
+                usage.ru_maxrss = psutil.Process().memory_info().rss // 1024
+            except Exception:
+                pass
+            return usage
+
+    resource = _ResourceModule()
 import signal
 import subprocess
 import sys
@@ -447,9 +466,20 @@ def _license_metadata() -> dict[str, Any]:
                 "license_review_status": "not_assessed",
             }
         except Exception as exc:
-            metadata[key] = {"model_id": model_id, "cache_error": f"{type(exc).__name__}: {exc}"}
+            metadata[key] = {
+                "model_id": model_id,
+                "license_lines": [],
+                "cache_error": f"{type(exc).__name__}: {exc}",
+            }
     if "gemma" in metadata:
         metadata["gemma"]["license_review_status"] = "review required; cache is not proof of approval"
+        # License text is only discoverable from a cached README; when the model
+        # is not downloaded, record the known gated-license references instead.
+        if not metadata["gemma"].get("license_lines"):
+            metadata["gemma"]["license_lines"] = [
+                "Gemma Terms of Use: https://ai.google.dev/gemma/terms",
+                "Gated access: review and accept the license on Hugging Face before use.",
+            ]
     return metadata
 
 

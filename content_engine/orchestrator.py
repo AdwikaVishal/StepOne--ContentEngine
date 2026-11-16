@@ -227,6 +227,23 @@ class ContentOrchestrator:
             else:
                 _log.info('reel_skipped', reason='no_highlight_clips')
 
+        # ── Crop intelligence report ────────────────────────────────────────
+        # Write per-image, per-format crop metadata so the frontend can inspect
+        # what the composition engine preserved or discarded.
+        crop_image_paths = [a.path for a in collage_assets] + [a.path for a in story_assets]
+        # Preserve order, drop duplicates.
+        seen = set()
+        crop_image_paths = [p for p in crop_image_paths if not (p in seen or seen.add(p))]
+        if crop_image_paths:
+            try:
+                report = self._layout.compute_crop_report(crop_image_paths)
+                (out_dir / "crop_report.json").write_text(
+                    json.dumps(report, indent=2), encoding="utf-8"
+                )
+                _log.info('crop_report_written', entries=len(report))
+            except Exception as e:
+                _log.error('crop_report_failed', error=str(e))
+
         # ── Step 3: Copy generation ───────────────────────────────────────────
         _log.info('copy_generation_start')
 
@@ -410,6 +427,23 @@ class ContentOrchestrator:
                     _log.error('reel_failed', error=str(e))
             else:
                 _log.info('reel_skipped', reason='no_highlight_clips')
+
+        # ── Crop intelligence report ────────────────────────────────────────
+        # Write per-image, per-format crop metadata so the frontend can inspect
+        # what the composition engine preserved or discarded.
+        crop_image_paths = [a.path for a in collage_assets] + [a.path for a in story_assets]
+        # Preserve order, drop duplicates.
+        seen = set()
+        crop_image_paths = [p for p in crop_image_paths if not (p in seen or seen.add(p))]
+        if crop_image_paths:
+            try:
+                report = self._layout.compute_crop_report(crop_image_paths)
+                (out_dir / "crop_report.json").write_text(
+                    json.dumps(report, indent=2), encoding="utf-8"
+                )
+                _log.info('crop_report_written', entries=len(report))
+            except Exception as e:
+                _log.error('crop_report_failed', error=str(e))
 
         # ── Step 3: Copy generation ───────────────────────────────────────────
         _log.info('copy_generation_start')

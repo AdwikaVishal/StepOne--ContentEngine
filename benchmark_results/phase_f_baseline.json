@@ -1,0 +1,119 @@
+{
+  "platform": "win32",
+  "torch_version": "2.6.0+cu124",
+  "cuda_available": true,
+  "cuda_device": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "cuda_vram_total_gb": 5.997,
+  "system_ram_total_gb": 15.24,
+  "models": {
+    "clip": {
+      "local_path": "C:\\Users\\ASUS\\StepOne--ContentEngine\\models\\clip\\0_CLIPModel",
+      "path_exists": true,
+      "device": "cuda:0",
+      "load_time_seconds": 2.825,
+      "ram_mb_after_load": 106.1,
+      "vram_mb_after_load": 577.1,
+      "peak_vram_mb": 577.1,
+      "inference_latency_seconds": 0.3001,
+      "embedding_shape": [
+        3,
+        512
+      ],
+      "ram_mb_after_infer": 408.6,
+      "vram_mb_after_infer": 585.2
+    },
+    "dinov2": {
+      "local_path": "C:\\Users\\ASUS\\StepOne--ContentEngine\\models\\dinov2",
+      "path_exists": true,
+      "device": "cuda",
+      "load_time_seconds": 0.453,
+      "ram_mb_after_load": 2.4,
+      "vram_mb_after_load": 85.0,
+      "peak_vram_mb": 93.1,
+      "inference_latency_seconds": 0.1513,
+      "output_shape": [
+        1,
+        257,
+        384
+      ],
+      "ram_mb_after_infer": 72.1,
+      "vram_mb_after_infer": 86.0
+    },
+    "florence": {
+      "local_path": "C:\\Users\\ASUS\\StepOne--ContentEngine\\models\\florence",
+      "path_exists": true,
+      "device": "cpu",
+      "dtype": "float32",
+      "load_time_seconds": 1.193,
+      "ram_mb_after_load": 931.5,
+      "vram_mb_after_load": 0.0,
+      "peak_vram_mb": 8.1,
+      "inference_error": "'NoneType' object has no attribute 'shape'"
+    },
+    "blip": {
+      "local_path": "C:\\Users\\ASUS\\StepOne--ContentEngine\\models\\blip",
+      "path_exists": true,
+      "device": "cuda",
+      "load_time_seconds": 1.917,
+      "ram_mb_after_load": 35.8,
+      "vram_mb_after_load": 856.6,
+      "peak_vram_mb": 864.8,
+      "inference_latency_seconds": 0.3918,
+      "generated_tokens": 9,
+      "ram_mb_after_infer": 174.7,
+      "vram_mb_after_infer": 858.6
+    },
+    "yolov8": {
+      "local_path": "C:\\Users\\ASUS\\StepOne--ContentEngine\\models\\yolov8\\yolov8n.pt",
+      "path_exists": true,
+      "device": "cuda",
+      "load_time_seconds": 0.08,
+      "ram_mb_after_load": 6.4,
+      "vram_mb_after_load": 0.0,
+      "peak_vram_mb": 8.1,
+      "inference_latency_seconds": 0.3284,
+      "num_detections": 0,
+      "ram_mb_after_infer": 184.7,
+      "vram_mb_after_infer": 12.1
+    },
+    "yolov11_face": {
+      "local_path": "C:\\Users\\ASUS\\StepOne--ContentEngine\\models\\yolov11-face\\model.pt",
+      "path_exists": true,
+      "device": "cuda",
+      "load_time_seconds": 0.067,
+      "ram_mb_after_load": 3.1,
+      "vram_mb_after_load": 0.0,
+      "peak_vram_mb": 8.1,
+      "inference_latency_seconds": 0.2415,
+      "num_detections": 7,
+      "ram_mb_after_infer": 28.4,
+      "vram_mb_after_infer": 10.0
+    },
+    "qwen": {
+      "local_path": "Qwen/Qwen2.5-1.5B-Instruct",
+      "path_exists": false,
+      "device": "cuda",
+      "load_time_seconds": 5.676,
+      "ram_mb_after_load": 46.2,
+      "vram_mb_after_load": 2945.3,
+      "peak_vram_mb": 2953.4,
+      "inference_latency_seconds": 4.4766,
+      "output_length": 229,
+      "output_sample": "\"Exciting news from the world of technology! Don't miss out on this year's #TechConference, where in",
+      "ram_mb_after_infer": 391.7,
+      "vram_mb_after_infer": 2945.3
+    }
+  },
+  "simultaneous_load": {
+    "models_loaded": [
+      "CLIP",
+      "Florence-2",
+      "Qwen"
+    ],
+    "ram_mb_total": -728.0,
+    "vram_mb_total": 3524.7,
+    "peak_vram_mb": 3532.9,
+    "vram_total_gb": 6.0,
+    "vram_remaining_gb": 2.55
+  }
+}

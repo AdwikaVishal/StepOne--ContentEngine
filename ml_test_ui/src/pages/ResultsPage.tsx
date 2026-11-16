@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   BarChart3, BriefcaseBusiness, Camera, ChevronLeft, Download,
-  File, FileDown, FileText, Film, Folder, Image, RefreshCw,
+  Eye, File, FileDown, FileText, Film, Folder, Image, RefreshCw,
   Smartphone, Tag as TagIcon, AlertTriangle, Sparkles
 } from 'lucide-react'
 import { Card, Btn, Tag } from '../components/ui'
@@ -15,8 +15,10 @@ import SocialShareButtons from '../components/export/SocialShareButtons'
 import { toast } from '../components/ui/Toast'
 import { useAnalytics } from '../contexts/AnalyticsContext'
 import { useIsMobile } from '../hooks/useMediaQuery'
-import { regenerateCaptions } from '../api'
+import { insertHashtags } from '../lib/formatters'
+import { regenerateCaptions, getLLMStatus, type LLMStatus } from '../api'
 import CaseStudyReport from '../components/CaseStudyReport'
+import { CropInspector } from '../components/crop/CropInspector'
 
 type Tab = 'linkedin' | 'instagram' | 'stories' | 'reel' | 'casestudy' | 'report'
 interface Props { result: any; eventName: string; onBack: () => void; jobId?: string | null }
@@ -38,7 +40,7 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
   const { trackEvent } = useAnalytics()
   const isMobile = useIsMobile()
   const [regenLoading, setRegenLoading] = useState(false)
-  const [groqBackend, setGroqBackend] = useState<string | null>(null)
+  const [llmStatus, setLLMStatus] = useState<LLMStatus | null>(null)
 
   const files: Record<string, string>    = result?.files    ?? {}
   const captions: Record<string, string> = result?.captions ?? {}
@@ -50,6 +52,7 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
     ? result.selected_brand : brandIds[0] ?? ''
   const [tab, setTab] = useState<Tab>('linkedin')
   const [activeBrandId, setActiveBrandId] = useState(initialBrandId)
+  const [showInspector, setShowInspector] = useState(false)
   const activeFileNames = isBrandMode && activeBrandId
     ? fileNames.filter(n => n.startsWith(`${activeBrandId}/`)) : fileNames
 
@@ -65,16 +68,16 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
   const reelUrl      = getUrl(/(?:instagram_reel|reel)\.mp4$/)
   const storyUrls    = getUrls(/(?:instagram_story_\d+|story_\d+)/)
 
-  const [liCaption,   setLiCaption]   = useState(caption('linkedin_caption') || caption('instagram_caption') || `Just wrapped ${eventName} — here's what stood out.\n\nThe energy in the room was electric.\n\nWhat's your biggest takeaway from recent events?\n\n#${eventName.replace(/\s+/g, '')} #EventInsights`)
-  const [igCaption,   setIgCaption]   = useState(caption('instagram_caption') || `POV: You attend ${eventName} and forget to eat.\n\nSwipe for the moments that did not make the recap.\n\n#${eventName.replace(/\s+/g, '')} #EventLife`)
-  const [reelCaption, setReelCaption] = useState(caption('instagram_reel_caption') || caption('reel_caption') || `24 hours at ${eventName}.\n\nTag someone who needs to be in the room next year.\n\n#${eventName.replace(/\s+/g, '')}`)
+  const [liCaption,   setLiCaption]   = useState(caption('linkedin_caption') || caption('instagram_caption') || '')
+  const [igCaption,   setIgCaption]   = useState(caption('instagram_caption') || '')
+  const [reelCaption, setReelCaption] = useState(caption('instagram_reel_caption') || caption('reel_caption') || '')
   const [storyCaps, setStoryCaps]     = useState<string[]>(() => {
     const raw = caption('story_captions') || caption('stories__story_captions') || ''
     if (raw) {
       const lines = raw.split('\n').filter(Boolean).map((l: string) => l.replace(/^Story \d+:\s*/i, '').trim()).filter(Boolean)
       if (lines.length) return lines
     }
-    return [`We are at ${eventName}`, 'The main stage', 'Best moment of the day', 'See you next year']
+    return []
   })
 
   useEffect(() => {
@@ -84,8 +87,16 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
     setReelCaption(caption('instagram_reel_caption') || caption('reel_caption') || '')
     const rawStories = caption('story_captions') || caption('stories__story_captions') || ''
     const nextStories = rawStories.split('\n').filter(Boolean).map((line: string) => line.replace(/^Story \d+:\s*/i, '').trim()).filter(Boolean)
-    setStoryCaps(nextStories.length ? nextStories : [`${activeBrandId.replace(/_/g, ' ')} at ${eventName}`])
+    setStoryCaps(nextStories)
   }, [activeBrandId])
+
+  useEffect(() => {
+    let cancelled = false
+    getLLMStatus().then(st => { if (!cancelled) setLLMStatus(st) }).catch(() => {
+      if (!cancelled) setLLMStatus(null)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const dl = (webUrl: string, filename: string) => {
     const a = document.createElement('a'); a.href = webUrl; a.download = filename
@@ -95,15 +106,15 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
 
   const handleRegen = async (platform: 'linkedin' | 'instagram' | 'reel' | 'stories') => {
     setRegenLoading(true)
-    const loadId = toast.loading('Regenerating with Groq AI…')
+    const loadId = toast.loading('Regenerating with local Qwen…')
     try {
       const r = await regenerateCaptions({ eventName, eventDescription: result?.event_description ?? eventName, platform, sceneConcepts: result?.scene_concepts ?? [], faceCount: result?.face_count ?? 0 })
-      setGroqBackend(r.backend)
+      if (r.provider_status) setLLMStatus(r.provider_status)
       if (platform === 'linkedin'  && r.linkedin)  setLiCaption(r.linkedin)
       if (platform === 'instagram' && r.instagram) setIgCaption(r.instagram)
       if (platform === 'reel'      && r.reel)      setReelCaption(r.reel)
       toast.dismiss(loadId)
-      toast.success(`Caption regenerated (${r.backend === 'groq' ? 'Groq AI' : 'Template'})`)
+      toast.success(`Caption regenerated via local Qwen`)
       trackEvent({ type: 'regen', platform })
     } catch (e: any) {
       toast.dismiss(loadId); toast.error('Regeneration failed', e?.response?.data?.detail ?? e.message)
@@ -113,9 +124,10 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
   const gridCols = isMobile ? '1fr' : '1fr 1fr'
 
   return (
-    <div style={{ maxWidth: 1160, margin: '0 auto', padding: '32px 24px 60px' }}>
+    <>
+      <div style={{ maxWidth: 1160, margin: '0 auto', padding: '32px 24px 60px' }}>
 
-      {/* Header */}
+        {/* Header */}
       <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 28 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 16 }}>
           <motion.button
@@ -134,7 +146,21 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 6px var(--green)' }} />
               <span style={{ fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>Generation complete</span>
             </div>
+            {llmStatus && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(124,106,255,0.1)', border: '1px solid rgba(124,106,255,0.25)', borderRadius: 20, padding: '5px 12px' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 6px var(--accent)' }} />
+                <span style={{ fontSize: 12, color: 'var(--accent-light)', fontWeight: 700 }}>
+                  LOCAL AI · QWEN · {llmStatus.device === 'cuda' ? 'CUDA' : 'CPU'}
+                </span>
+              </div>
+            )}
             <BulkDownload files={files} />
+            <button
+              onClick={() => setShowInspector(!showInspector)}
+              style={{ background: 'var(--s3)', border: '1px solid var(--b1)', borderRadius: 20, padding: '5px 12px', color: 'var(--t2)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <Eye size={14} /> {showInspector ? 'Hide' : 'Inspect'} crop
+            </button>
           </div>
         </div>
 
@@ -213,13 +239,17 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
                   <p style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12, fontWeight: 700 }}>Caption</p>
                   <CaptionEditor value={liCaption} onChange={setLiCaption} platform="linkedin" />
                   <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <HashtagGenerator eventName={eventName} onInsert={tags => setLiCaption(v => v + '\n\n' + tags)} />
+                    <HashtagGenerator eventName={eventName} onInsert={tags => setLiCaption(v => insertHashtags(v, tags))} />
                     <Btn size="sm" variant="ghost" onClick={() => handleRegen('linkedin')} disabled={regenLoading} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       {regenLoading ? <RefreshCw size={12} className="spin" /> : <Sparkles size={12} color="var(--accent)" />}
                       Regenerate with AI
                     </Btn>
                   </div>
-                  {groqBackend && <p style={{ fontSize: 10, color: 'var(--t3)', marginTop: 6 }}>Last generated by: {groqBackend === 'groq' ? 'Groq (llama-3.3-70b)' : 'Template'}</p>}
+                  {llmStatus && (
+                    <p style={{ fontSize: 10, color: 'var(--t3)', marginTop: 6 }}>
+                      Last generated by: LOCAL AI · QWEN · {llmStatus.device === 'cuda' ? 'CUDA' : 'CPU'}
+                    </p>
+                  )}
                 </Card>
                 <Card><SocialShareButtons platform="linkedin" caption={liCaption} /></Card>
                 {(collageUrl || carouselUrls[0]) && (
@@ -251,7 +281,7 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
                   <p style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 12, fontWeight: 700 }}>Caption</p>
                   <CaptionEditor value={igCaption} onChange={setIgCaption} platform="instagram" />
                   <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <HashtagGenerator eventName={eventName} onInsert={tags => setIgCaption(v => v + '\n\n' + tags)} />
+                    <HashtagGenerator eventName={eventName} onInsert={tags => setIgCaption(v => insertHashtags(v, tags))} />
                     <Btn size="sm" variant="ghost" onClick={() => handleRegen('instagram')} disabled={regenLoading} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       {regenLoading ? <RefreshCw size={12} className="spin" /> : <Sparkles size={12} color="var(--accent)" />}
                       Regenerate with AI
@@ -369,7 +399,7 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
                   </div>
                   <Card>
                     <pre style={{ fontFamily: "'JetBrains Mono', 'Fira Code', monospace", fontSize: 13, color: 'var(--t2)', lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: 600, overflowY: 'auto' }}>
-                      {caption('case_study') || `# Case Study: ${eventName}\n\nGenerated by Content & Design Engine.\nDownload the .md file to view the full document.`}
+                      {caption('case_study') || ''}
                     </pre>
                   </Card>
                 </div>
@@ -437,5 +467,40 @@ export default function ResultsPage({ result, eventName, onBack, jobId }: Props)
         </motion.div>
       </AnimatePresence>
     </div>
+
+    {showInspector && (
+      <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ background: 'var(--s1)', border: '1px solid var(--b1)', borderRadius: 12, width: 'min(90vw, 800px)', maxHeight: '90vh', overflow: 'auto', padding: 24, position: 'relative' }}>
+          <button
+            onClick={() => setShowInspector(false)}
+            style={{ position: 'absolute', top: 10, right: 12, background: 'none', border: 'none', color: 'var(--t2)', cursor: 'pointer', fontSize: 20, lineHeight: 1 }}
+          >
+            ✕
+          </button>
+          <h3 style={{ margin: '0 0 12 0', color: 'var(--t1)', fontSize: 16 }}>Crop Inspector — inspect &amp; adjust any image</h3>
+          <CropInspector
+            imageUrl={
+              tab === 'linkedin' ? collageUrl
+              : tab === 'instagram' ? carouselUrls[0]
+              : tab === 'stories' ? storyUrls[0]
+              : undefined
+            }
+            imagePath={
+              tab === 'linkedin' ? collageUrl
+              : tab === 'instagram' ? carouselUrls[0]
+              : tab === 'stories' ? storyUrls[0]
+              : undefined
+            }
+            formatKey={
+              tab === 'linkedin' ? 'linkedin_1_1'
+              : tab === 'instagram' ? 'carousel_4_5'
+              : tab === 'stories' ? 'story_9_16'
+              : undefined
+            }
+          />
+        </div>
+      </div>
+    )}
+    </>
   )
 }

@@ -1,7 +1,7 @@
 /**
  * StudioPage — premium redesign. All functionality preserved.
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Variants } from 'framer-motion'
 import {
@@ -22,7 +22,11 @@ import { saveJob } from '../lib/cache'
 import type { JobStatus } from '../api'
 import { JOB_STEPS } from '../lib/constants'
 
-interface Props { onResult: (data: { result: any; eventName: string; files: File[]; jobId: string }) => void }
+interface Props {
+  onResult: (data: { result: any; eventName: string; files: File[]; jobId: string }) => void
+  apiOk: boolean | null
+  onRetryConnection?: () => void
+}
 
 const ORDERED_STEPS = [
   'queued', 'loading_models', 'processing_assets', 'ml_selection',
@@ -83,11 +87,13 @@ const OUTPUT_CARDS = [
   { icon: BarChart3,         title: 'Selection Report',   desc: 'AI reasoning for every asset',          color: 'var(--accent-light)' },
 ]
 
-export default function StudioPage({ onResult }: Props) {
+export default function StudioPage({ onResult, apiOk, onRetryConnection }: Props) {
   const [files, setFiles]     = useState<File[]>([])
   const [jobId, setJobId]     = useState<string | null>(null)
   const [error, setError]     = useState<string | null>(null)
-  const [submitting, setSub]  = useState(false)
+  const [submitting, setSub]        = useState(false)
+  const [retrievingResults, setRetrievingResults] = useState(false)
+  const [resultError, setResultError] = useState<string | null>(null)
   const [brandMode, setBrandMode] = useState(false)
   const [brands, setBrands] = useState<string[]>(['', '', '', ''])
   const [selectedBrand, setSelectedBrand] = useState('')
@@ -106,6 +112,16 @@ export default function StudioPage({ onResult }: Props) {
 
   const removeFile = (name: string) => setFiles(p => p.filter(f => f.name !== name))
 
+  // Recover an in-flight / recently completed job from sessionStorage, but only
+  // once the backend is confirmed online. Recovering while offline would trigger
+  // polling against a dead server and fabricate an "In-process" state.
+  useEffect(() => {
+    if (apiOk !== true) return
+    if (jobId) return
+    const stored = sessionStorage.getItem('ce_active_job_id')
+    if (stored) setJobId(stored)
+  }, [apiOk, jobId])
+
   const handleWizardSubmit = async (cfg: WizardConfig) => {
     if (!files.length) { toast.error('No files', 'Please upload at least one file first'); return }
     const cleanBrands = brands.map(b => b.trim())
@@ -115,13 +131,18 @@ export default function StudioPage({ onResult }: Props) {
       const missingRenderBrands = cleanBrands.filter((_, i) => (renderFilesByBrand[i]?.length ?? 0) === 0)
       if (missingRenderBrands.length) { toast.error('Render images missing', `Add render/logo images for: ${missingRenderBrands.join(', ')}`); return }
     }
-    setError(null); setSub(true)
+    setError(null); setResultError(null); setSub(true)
+    // A new submission invalidates any previously stored active job.
+    sessionStorage.removeItem('ce_active_job_id')
+    sessionStorage.removeItem('ce_active_job_event')
     const loadingId = toast.loading('Submitting job…')
     try {
       const r = brandMode
         ? await generateFast(files, { eventName: cfg.eventName, eventDescription: cfg.eventDesc || cfg.eventName, mode: 'gff', brands: cleanBrands, selectedBrand, renderFilesByBrand, generateReel: cfg.platforms.includes('reel') })
         : await generateAsync(files, cfg.eventName, cfg.eventDesc || cfg.eventName)
       setJobId(r.job_id)
+      sessionStorage.setItem('ce_active_job_id', r.job_id)
+      sessionStorage.setItem('ce_active_job_event', cfg.eventName)
       toast.dismiss(loadingId)
       toast.info(brandMode ? 'Brand job queued' : 'Job queued', `Backend: ${r.backend}`)
       trackEvent({ type: 'job_start', jobId: r.job_id })
@@ -134,26 +155,54 @@ export default function StudioPage({ onResult }: Props) {
 
   const handleDone = async (_s: JobStatus) => {
     if (!jobId) return
-    try {
-      const result = await getJobResult(jobId)
-      saveJob({ id: jobId, eventName: result.event ?? 'Event', timestamp: Date.now(), fileCount: files.length, result })
-      trackEvent({ type: 'job_complete', jobId })
-      onResult({ result, eventName: result.event ?? 'Event', files, jobId })
-    } catch (e: any) {
-      const msg = e?.response?.data?.detail ?? e.message
-      setError(msg); toast.error('Failed to load results', msg)
+    setRetrievingResults(true)
+    setResultError(null)
+    const MAX_ATTEMPTS = 3
+    let result: any = null
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        result = await getJobResult(jobId)
+        break
+      } catch (e: any) {
+        const msg = e?.response?.data?.detail ?? e.message ?? 'Result retrieval failed'
+        if (attempt >= MAX_ATTEMPTS) {
+          setResultError(msg)
+          setRetrievingResults(false)
+          return
+        }
+        // Retry retrieving results without rerunning the generation pipeline.
+        await new Promise(resolve => setTimeout(resolve, 1500))
+      }
     }
+    if (!result) { setRetrievingResults(false); return }
+
+    setRetrievingResults(false)
+    sessionStorage.removeItem('ce_active_job_id')
+    sessionStorage.removeItem('ce_active_job_event')
+    saveJob({ id: jobId, eventName: result.event ?? 'Event', timestamp: Date.now(), fileCount: files.length, result })
+    trackEvent({ type: 'job_complete', jobId })
+    onResult({ result, eventName: result.event ?? 'Event', files, jobId })
   }
 
-  const handleFail = (msg: string) => { setError(msg); toast.error('Generation failed', msg) }
+  const handleFail = (msg: string) => {
+    sessionStorage.removeItem('ce_active_job_id')
+    sessionStorage.removeItem('ce_active_job_event')
+    setError(msg); toast.error('Generation failed', msg)
+  }
+
+  const retryResults = async () => {
+    if (!jobId) return
+    setResultError(null)
+    await handleDone({ job_id: jobId, status: 'completed' } as JobStatus)
+  }
   const updateRenderFiles = (index: number, nextFiles: File[]) => {
     setRenderFilesByBrand(prev => { const next = [...prev]; next[index] = nextFiles; return next })
   }
 
-  const { pct, step, status } = useJobPolling(jobId, handleDone, handleFail)
-  const isRunning = !!jobId && !['completed', 'SUCCESS', 'failed', 'FAILURE'].includes(status?.status ?? '')
-  const isFailed  = status?.status === 'failed' || status?.status === 'FAILURE'
+  const { pct, step, status, networkError } = useJobPolling(jobId, handleDone, handleFail)
+  const isFailed  = status?.status === 'failed' || status?.status === 'FAILURE' || status?.status === 'error'
   const isDone    = status?.status === 'completed' || status?.status === 'SUCCESS'
+  const isRunning = !!jobId && !isDone && !isFailed
   const imageCount = files.filter(f => f.type.startsWith('image/')).length
   const videoCount = files.filter(f => f.type.startsWith('video/')).length
 
@@ -274,37 +323,110 @@ export default function StudioPage({ onResult }: Props) {
         )}
       </AnimatePresence>
 
-      {/* Job Progress */}
+      {/* Job Progress — only shown when backend is confirmed online */}
       <AnimatePresence>
-        {jobId && (
+        {jobId && apiOk === true && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginBottom: 20 }}>
             <Card glow={isRunning} style={{
               border: `1px solid ${isFailed ? 'rgba(239,68,68,0.3)' : isDone ? 'rgba(16,185,129,0.3)' : 'var(--b-accent)'}`,
               background: isFailed ? 'rgba(239,68,68,0.04)' : isDone ? 'rgba(16,185,129,0.04)' : 'rgba(124,106,255,0.04)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                {isRunning
-                  ? <Spinner size={18} />
-                  : isFailed
-                  ? <AlertTriangle size={18} color="var(--red)" />
-                  : <CheckCircle size={18} color="var(--green)" />
-                }
+                {isDone && retrievingResults ? <Spinner size={18} />
+                  : isRunning ? <Spinner size={18} />
+                  : isFailed ? <AlertTriangle size={18} color="var(--red)" />
+                  : <CheckCircle size={18} color="var(--green)" />}
                 <span style={{ fontWeight: 700, fontSize: 15, color: isFailed ? 'var(--red)' : isDone ? 'var(--green)' : 'var(--t1)' }}>
-                  {isFailed ? 'Generation failed' : isDone ? 'Generation complete!' : 'Generating content…'}
+                  {isFailed ? 'Generation failed' : isDone && retrievingResults ? 'Retrieving results…' : isDone ? 'Generation complete!' : 'Generating content…'}
                 </span>
                 <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--t3)', background: 'var(--s3)', borderRadius: 6, padding: '3px 10px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   {status?.backend === 'celery' ? <Zap size={10} /> : <RefreshCw size={10} />}
-                  {status?.backend === 'celery' ? 'Celery' : 'In-process'}
+                  {isDone ? 'Complete' : isFailed ? 'Failed' : status?.backend === 'celery' ? 'Celery' : 'In-process'}
                 </span>
               </div>
               <StepProgress currentStep={step} pct={pct} failed={isFailed} />
               <p style={{ fontSize: 10, color: 'var(--t4)', marginTop: 10, fontFamily: 'monospace' }}>job: {jobId}</p>
             </Card>
+
+            {/* Transient network error — NOT a job failure. Polling continues. */}
+            {networkError && (
+              <p style={{ fontSize: 11, color: 'var(--t3)', marginTop: 8, background: 'var(--s2)', border: '1px solid var(--b1)', borderRadius: 6, padding: '6px 10px', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <RefreshCw size={11} style={{ animation: 'spin 1s linear infinite', color: 'var(--accent)' }} />
+                {networkError}
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Error */}
+      {/* Backend disconnected — do not fabricate progress. Preserve job ID for recovery. */}
+      <AnimatePresence>
+        {jobId && apiOk === false && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginBottom: 20 }}>
+            <Card style={{ border: '1px solid rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <AlertTriangle size={18} color="var(--red)" />
+                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--red)' }}>
+                  Backend disconnected
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 12 }}>
+                Your previous job ({jobId.slice(0, 8)}…) may still exist on the server.
+                Reconnect to check its status — no new generation will be started.
+              </p>
+              <AnimatedBtn variant="ghost" size="sm" label="Retry connection" onClick={() => onRetryConnection?.()}>
+                Retry connection
+              </AnimatedBtn>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Backend connecting — neutral state, no fabricated progress */}
+      <AnimatePresence>
+        {jobId && apiOk === null && (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginBottom: 20 }}>
+            <Card style={{ border: '1px solid var(--yellow)', background: 'rgba(245,158,11,0.04)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                <RefreshCw size={18} style={{ animation: 'spin 1s linear infinite', color: 'var(--yellow)' }} />
+                <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--yellow)' }}>
+                  Checking backend…
+                </span>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--t2)', marginBottom: 0 }}>
+                Verifying connection. Your job ({jobId.slice(0, 8)}…) will be recovered once the backend is online.
+              </p>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Result-retrieval error (job completed, but results unavailable). Retry does NOT rerun generation. */}
+      <AnimatePresence>
+        {isDone && resultError && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginBottom: 20 }}>
+            <Card style={{ borderColor: 'rgba(239,68,68,0.3)', background: 'rgba(239,68,68,0.04)' }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <AlertTriangle size={16} color="var(--red)" style={{ flexShrink: 0, marginTop: 2 }} />
+                <div style={{ flex: 1 }}>
+                  <p style={{ color: 'var(--red)', fontWeight: 700, marginBottom: 4, fontSize: 14 }}>Generation completed, but results could not be retrieved.</p>
+                  <p style={{ color: '#fca5a5', fontSize: 13, marginBottom: 10 }}>{resultError}</p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <AnimatedBtn variant="ghost" size="sm" label="Retry results" onClick={retryResults}>
+                  Retry results
+                </AnimatedBtn>
+                <AnimatedBtn variant="ghost" size="sm" label="Dismiss" onClick={() => { setResultError(null) }}>
+                  Dismiss
+                </AnimatedBtn>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Error (submission or actual job failure) */}
       <AnimatePresence>
         {error && (
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ marginBottom: 20 }}>

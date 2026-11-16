@@ -137,18 +137,16 @@ class TestGeminiCentralizedConfig:
 
 
 class TestGeminiVideoDeferred:
-    """Test that video analysis returns explicit unsupported error."""
+    """Gemini video analysis is disabled; the provider cannot be constructed."""
 
-    def test_understand_video_raises_unsupported_feature_error(self):
-        """Cloud mode understand_video should raise UnsupportedFeatureError."""
+    def test_gemini_provider_construction_disabled(self):
+        """cloud_testing cannot construct GeminiVisionProvider."""
         with patch.dict(
             os.environ,
             {"AI_EXECUTION_MODE": "cloud_testing", "GEMINI_API_KEY": "test-key"},
         ):
-            provider = GeminiVisionProvider()
-
-        with pytest.raises(UnsupportedFeatureError):
-            provider.understand_video("/fake/video.mp4")
+            with pytest.raises(ConfigurationError):
+                GeminiVisionProvider()
 
     def test_unsupported_feature_error_is_provider_error(self):
         """UnsupportedFeatureError should be a subclass of ProviderError."""

@@ -5,6 +5,7 @@ Uses sentence-transformers/clip-ViT-B-32 which is already installed in the venv.
 
 import gc
 import numpy as np
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Any
@@ -22,6 +23,39 @@ try:
     from content_engine.ai_mode import is_cloud_testing
 except ImportError:
     is_cloud_testing = lambda: False
+
+try:
+    from config import (
+        CLIP_MODEL_PATH,
+        DINOV2_MODEL_PATH,
+        YOLOV8_MODEL_PATH,
+        settings,
+    )
+    from content_engine.utils.device_manager import get_device_manager
+    from content_engine.utils.mps_safe import register_model, MPS_DEVICE, recommend_device
+    from content_engine.utils.model_registry import get_clip, get_clip_device
+except ImportError:
+    CLIP_MODEL_PATH = "clip-ViT-B-32"
+    DINOV2_MODEL_PATH = "facebook/dinov2-small"
+    YOLOV8_MODEL_PATH = "yolov8n.pt"
+    settings = None  # type: ignore
+
+    def get_device_manager():  # type: ignore
+        return None
+
+    def register_model(*args, **kwargs):  # type: ignore
+        pass
+
+    MPS_DEVICE = "cpu"  # type: ignore
+
+    def recommend_device(*args, **kwargs):  # type: ignore
+        return "cpu"
+
+    def get_clip(*args, **kwargs):  # type: ignore
+        return None
+
+    def get_clip_device(*args, **kwargs):  # type: ignore
+        return "cpu"
 
 try:
     import cv2
@@ -44,12 +78,11 @@ if not is_cloud_testing():
     try:
         from transformers import AutoImageProcessor, AutoModel
         from ultralytics import YOLO
-        from groq import Groq
         from sklearn.metrics.pairwise import cosine_similarity
         _DINO_YOLO_GROQ_AVAILABLE = True
     except ImportError as e:
         _DINO_YOLO_GROQ_AVAILABLE = False
-        _log.warning(f"DINOv2/YOLO/Groq not available — advanced features disabled: {e}")
+        _log.warning(f"DINOv2/YOLO not available — advanced features disabled: {e}")
 else:
     _CLIP_AVAILABLE = False
     _DINO_YOLO_GROQ_AVAILABLE = False
@@ -161,11 +194,32 @@ class BrandMatcher:
 
     def _load_clip(self):
         try:
-            from content_engine.utils.mps_safe import MPS_DEVICE
-            self._clip = SentenceTransformer("clip-ViT-B-32", device=MPS_DEVICE)
-            _log.info("clip_loaded_for_brand_matching")
+            t0 = time.perf_counter()
+            # Use the shared, thread-safe CLIP instance from the model
+            # registry instead of loading a private copy. This prevents
+            # concurrent SentenceTransformer initialization (meta-tensor
+            # error) and duplicate VRAM usage across components.
+            self._clip = get_clip()
+            _log.info("clip_loaded_for_brand_matching", model_path=CLIP_MODEL_PATH)
+            load_time = time.perf_counter() - t0
+
+            # Register once with the DeviceManager (best-effort). The registry
+            # already registers the shared instance, so this is a no-op when
+            # another component already registered it.
+            estimated_vram = 577.0 if str(get_clip_device()).startswith("cuda") else 0.0
+            estimated_ram = 106.0
+            dm = get_device_manager()
+            if dm is not None and not dm.is_model_loaded("clip"):
+                dm.register_model(
+                    "clip",
+                    model=self._clip,
+                    device=get_clip_device(),
+                    vram_mb=estimated_vram,
+                    ram_mb=estimated_ram,
+                    load_time_seconds=load_time,
+                )
         except Exception as e:
-            _log.warning("clip_load_failed", error=str(e))
+            _log.warning("clip_load_failed", error=str(e), model_path=CLIP_MODEL_PATH)
 
     def _encode_image(self, path: str) -> Optional[np.ndarray]:
         try:
@@ -267,19 +321,47 @@ class BrandMatcher:
             from content_engine.utils.mps_safe import MPS_DEVICE
             self._device = MPS_DEVICE
 
-            # Load DINOv2
-            self._dino_processor = AutoImageProcessor.from_pretrained("facebook/dinov2-small")
-            self._dino_model = AutoModel.from_pretrained("facebook/dinov2-small")
+            # Load DINOv2 from local directory
+            t0 = time.perf_counter()
+            self._dino_processor = AutoImageProcessor.from_pretrained(
+                DINOV2_MODEL_PATH, local_files_only=True
+            )
+            self._dino_model = AutoModel.from_pretrained(
+                DINOV2_MODEL_PATH, local_files_only=True
+            )
             self._dino_model.eval()
             self._dino_model.to(self._device)
+            dino_load_time = time.perf_counter() - t0
 
-            # Load YOLO
-            self._yolo_model = YOLO("yolov8n.pt")
+            # Load YOLOv8 from local file
+            t0 = time.perf_counter()
+            self._yolo_model = YOLO(YOLOV8_MODEL_PATH)
+            yolo_load_time = time.perf_counter() - t0
 
-            # Load Groq
-            from config import settings
-            if settings.groq_api_key:
-                self._groq_client = Groq(api_key=settings.groq_api_key)
+            # Groq is disabled — no cloud client is created. _llm_verify() returns
+            # None because self._groq_client remains None, so brand matching falls
+            # back to local DINOv2/YOLO/orb/histogram scoring only.
+            self._groq_client = None
+
+            # Register DINOv2 with DeviceManager
+            dm = get_device_manager()
+            if dm is not None:
+                dm.register_model(
+                    "dinov2",
+                    model=self._dino_model,
+                    device=self._device,
+                    vram_mb=93.0 if self._device.startswith("cuda") else 0.0,
+                    ram_mb=2.4,
+                    load_time_seconds=dino_load_time,
+                )
+                dm.register_model(
+                    "yolov8",
+                    model=self._yolo_model,
+                    device=self._device,
+                    vram_mb=50.0 if self._device.startswith("cuda") else 0.0,
+                    ram_mb=6.5,
+                    load_time_seconds=yolo_load_time,
+                )
 
             _log.info("dino_yolo_groq_loaded")
         except Exception as e:

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Home, BarChart3, FileText, Palette } from 'lucide-react'
+import { Home, BarChart3, FileText, Palette, ScanSearch } from 'lucide-react'
 import type { View } from '../../App'
 
 interface Props { view: View; onViewChange: (view: View) => void; hasResults?: boolean }
@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { id: 'results'   as const, label: 'Results',   icon: FileText },
   { id: 'analytics' as const, label: 'Analytics', icon: BarChart3 },
   { id: 'brand-profiles' as const, label: 'Brands', icon: Palette },
+  { id: 'brand-intelligence' as const, label: 'Intel', icon: ScanSearch },
 ]
 
 export default function BottomNav({ view, onViewChange, hasResults = false }: Props) {

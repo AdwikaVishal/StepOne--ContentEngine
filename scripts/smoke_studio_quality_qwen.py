@@ -1,6 +1,26 @@
 """Evaluate three synthetic Studio prompts against cached local Qwen, sequentially."""
 from __future__ import annotations
-import json, os, platform, resource, signal, subprocess, sys, tempfile, time, traceback
+import json, os, platform, signal, subprocess, sys, tempfile, time, traceback
+try:
+    import resource
+except ImportError:  # Windows has no `resource`; approximate peak RSS with psutil.
+    class _ResourceUsage:
+        ru_maxrss = 0
+
+    class _ResourceModule:
+        RUSAGE_SELF = 0
+
+        @staticmethod
+        def getrusage(_who):
+            usage = _ResourceUsage()
+            try:
+                import psutil
+                usage.ru_maxrss = psutil.Process().memory_info().rss // 1024
+            except Exception:
+                pass
+            return usage
+
+    resource = _ResourceModule()
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

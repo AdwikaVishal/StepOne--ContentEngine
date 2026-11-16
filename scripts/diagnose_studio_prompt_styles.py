@@ -4,7 +4,26 @@ from __future__ import annotations
 import json
 import os
 import platform
-import resource
+try:
+    import resource
+except ImportError:  # Windows has no `resource`; approximate peak RSS with psutil.
+    class _ResourceUsage:
+        ru_maxrss = 0
+
+    class _ResourceModule:
+        RUSAGE_SELF = 0
+
+        @staticmethod
+        def getrusage(_who):
+            usage = _ResourceUsage()
+            try:
+                import psutil
+                usage.ru_maxrss = psutil.Process().memory_info().rss // 1024
+            except Exception:
+                pass
+            return usage
+
+    resource = _ResourceModule()
 import signal
 import subprocess
 import sys

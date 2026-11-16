@@ -44,6 +44,7 @@ class TestLocalProviderMocked:
         provider._mlx_client = MockMLXClient()
         provider._mlx_errors = (Exception, Exception, Exception)
         provider._initialized = True
+        provider._backend = "mlx"
         
         ctx = CaptionGenerationContext(event_name="Test Event", platform="linkedin")
         result = provider.generate_linkedin(ctx)

@@ -1,0 +1,2855 @@
+{
+  "generated_at": "2026-11-10T16:37:53.512853",
+  "source": "uploads/ (real event photographs)",
+  "total_tested": 12,
+  "formats": [
+    "linkedin_1_1",
+    "carousel_4_5",
+    "story_9_16",
+    "landscape_16_9"
+  ],
+  "results": [
+    {
+      "file": "00219d4e7ee44a4ab2e191ff52d20477.jpg",
+      "label": "single_portrait_face_right",
+      "width": 4400,
+      "height": 2933,
+      "orientation": "landscape",
+      "scene_type": "portrait",
+      "scene_type_confidence": 0.85,
+      "confidence": 1.0,
+      "faces_detected": 1,
+      "people_detected": 1,
+      "objects_detected": 2,
+      "focal_point": [
+        0.6393074961125279,
+        0.5313604943793163
+      ],
+      "focal_region": [
+        0.2182465709339489,
+        0.050815503770403614,
+        1.0,
+        1.0
+      ],
+      "main_subject": [
+        0.3982465709339489,
+        0.2308155037704036,
+        0.8301954234730113,
+        0.9909890217460791
+      ],
+      "face_boxes": [
+        [
+          0.5616408469460227,
+          0.25839946134237557,
+          0.6621825062144886,
+          0.48537840714765174
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_right_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_right_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_right_linkedin_1_1.png",
+          "composition_score": 0.8985,
+          "breakdown": {
+            "face_preservation": 0.4633,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.8107,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5879
+          },
+          "crop_box_after": [
+            1346,
+            0,
+            4279,
+            2933
+          ],
+          "crop_box_norm_after": [
+            0.3059090909090909,
+            0.0,
+            0.9725,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_right_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_right_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_right_carousel_4_5.png",
+          "composition_score": 0.8988,
+          "breakdown": {
+            "face_preservation": 0.4633,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.8021,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.6023
+          },
+          "crop_box_after": [
+            1530,
+            0,
+            3876,
+            2933
+          ],
+          "crop_box_norm_after": [
+            0.3477272727272727,
+            0.0,
+            0.8809090909090909,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.8527,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_right_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_right_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_right_story_9_16.png",
+          "composition_score": 0.7895,
+          "breakdown": {
+            "face_preservation": 0.4633,
+            "subject_coverage": 0.9036,
+            "saliency_retention": 0.7591,
+            "visual_balance": 0.7374,
+            "boundary_safety": 0.75,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5959
+          },
+          "crop_box_after": [
+            1545,
+            0,
+            3195,
+            2933
+          ],
+          "crop_box_norm_after": [
+            0.35113636363636364,
+            0.0,
+            0.7261363636363637,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.6691,
+          "main_subject_visibility_after": 0.7591,
+          "face_visibility_before": [
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_right_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_right_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_right_landscape_16_9.png",
+          "composition_score": 0.8818,
+          "breakdown": {
+            "face_preservation": 0.4633,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6975,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5794
+          },
+          "crop_box_after": [
+            0,
+            447,
+            4400,
+            2922
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.1524036822366178,
+            1.0,
+            0.9962495738152063
+          ],
+          "main_subject_visibility_before": 0.9091,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "5b1a1be834f44be395ff956cd5ab0366.jpg",
+      "label": "single_portrait_face_near_right_edge",
+      "width": 5524,
+      "height": 3683,
+      "orientation": "landscape",
+      "scene_type": "portrait",
+      "scene_type_confidence": 0.85,
+      "confidence": 0.935,
+      "faces_detected": 1,
+      "people_detected": 1,
+      "objects_detected": 0,
+      "focal_point": [
+        0.7812577977915036,
+        0.618255509430052
+      ],
+      "focal_region": [
+        0.6970996800891565,
+        0.47089919053760526,
+        1.0,
+        0.9250339954054101
+      ],
+      "main_subject": [
+        0.8770996800891564,
+        0.6508991905376053,
+        0.9513090604634323,
+        0.74503399540541
+      ],
+      "face_boxes": [
+        [
+          0.9037278028263034,
+          0.6624425411094895,
+          0.924072265625,
+          0.7007557819500068
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_near_right_edge_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_near_right_edge_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_near_right_edge_linkedin_1_1.png",
+          "composition_score": 0.8713,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6724,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5838
+          },
+          "crop_box_after": [
+            1841,
+            0,
+            5524,
+            3683
+          ],
+          "crop_box_norm_after": [
+            0.3332729905865315,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_near_right_edge_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_near_right_edge_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_near_right_edge_carousel_4_5.png",
+          "composition_score": 0.8769,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7092,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5882
+          },
+          "crop_box_after": [
+            2578,
+            0,
+            5524,
+            3683
+          ],
+          "crop_box_norm_after": [
+            0.4666908037653874,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_near_right_edge_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_near_right_edge_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_near_right_edge_story_9_16.png",
+          "composition_score": 0.874,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7184,
+            "boundary_safety": 1.0,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5863
+          },
+          "crop_box_after": [
+            3280,
+            0,
+            5352,
+            3683
+          ],
+          "crop_box_norm_after": [
+            0.5937726285300506,
+            0.0,
+            0.9688631426502534,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_near_right_edge_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_near_right_edge_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_near_right_edge_landscape_16_9.png",
+          "composition_score": 0.8545,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.5542,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5807
+          },
+          "crop_box_after": [
+            0,
+            576,
+            5524,
+            3683
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.1563942438229704,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "1824eb3c4dae42e6b055941acb57187c.jpg",
+      "label": "single_portrait_face_bottom_right",
+      "width": 6168,
+      "height": 4112,
+      "orientation": "landscape",
+      "scene_type": "portrait",
+      "scene_type_confidence": 0.85,
+      "confidence": 1.0,
+      "faces_detected": 1,
+      "people_detected": 1,
+      "objects_detected": 2,
+      "focal_point": [
+        0.7392777369373147,
+        0.6313927849465484
+      ],
+      "focal_region": [
+        0.6289995427508916,
+        0.3009906658959296,
+        1.0,
+        1.0
+      ],
+      "main_subject": [
+        0.8089995427508917,
+        0.4809906658959296,
+        0.9480157003637727,
+        0.9929309652009363
+      ],
+      "face_boxes": [
+        [
+          0.8148175943377107,
+          0.5044696377409108,
+          0.8593766624361624,
+          0.595692259792224
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_bottom_right_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_bottom_right_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_bottom_right_linkedin_1_1.png",
+          "composition_score": 0.872,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6908,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5645
+          },
+          "crop_box_after": [
+            2056,
+            0,
+            6168,
+            4112
+          ],
+          "crop_box_norm_after": [
+            0.3333333333333333,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.175,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.4155
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_bottom_right_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_bottom_right_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_bottom_right_carousel_4_5.png",
+          "composition_score": 0.8759,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7092,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5786
+          },
+          "crop_box_after": [
+            2878,
+            0,
+            6168,
+            4112
+          ],
+          "crop_box_norm_after": [
+            0.4666018158236057,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_bottom_right_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_bottom_right_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_bottom_right_story_9_16.png",
+          "composition_score": 0.8719,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7019,
+            "boundary_safety": 1.0,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5883
+          },
+          "crop_box_after": [
+            3681,
+            0,
+            5994,
+            4112
+          ],
+          "crop_box_norm_after": [
+            0.5967898832684825,
+            0.0,
+            0.9717898832684825,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\single_portrait_face_bottom_right_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\single_portrait_face_bottom_right_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\single_portrait_face_bottom_right_landscape_16_9.png",
+          "composition_score": 0.8592,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.5967,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5682
+          },
+          "crop_box_after": [
+            0,
+            642,
+            6168,
+            4112
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.1561284046692607,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.8608,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 1,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "234c4d933cec4e5fbe21d7190b3207c6.jpg",
+      "label": "two_people_centered",
+      "width": 4263,
+      "height": 2842,
+      "orientation": "landscape",
+      "scene_type": "group",
+      "scene_type_confidence": 0.8,
+      "confidence": 1.0,
+      "faces_detected": 2,
+      "people_detected": 2,
+      "objects_detected": 2,
+      "focal_point": [
+        0.44321259024150733,
+        0.5501558853874816
+      ],
+      "focal_region": [
+        0.0,
+        0.3093581489707952,
+        0.5571488154798557,
+        1.0
+      ],
+      "main_subject": [
+        0.14720154882400158,
+        0.4893581489707952,
+        0.37714881547985574,
+        0.9951617719420742
+      ],
+      "face_boxes": [
+        [
+          0.2282859736028032,
+          0.5106767282613477,
+          0.30756919551225664,
+          0.6735144876242523
+        ],
+        [
+          0.5820054213765248,
+          0.2667585959491555,
+          0.6689650705379134,
+          0.4511793057403457
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_centered_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_centered_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_centered_linkedin_1_1.png",
+          "composition_score": 0.775,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 0.9189,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7618,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5944
+          },
+          "crop_box_after": [
+            573,
+            0,
+            3415,
+            2842
+          ],
+          "crop_box_norm_after": [
+            0.13441238564391272,
+            0.0,
+            0.8010790523105794,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.9159,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 2,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_centered_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_centered_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_centered_carousel_4_5.png",
+          "composition_score": 0.5332,
+          "breakdown": {
+            "face_preservation": 0.1938,
+            "subject_coverage": 0.7429,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7421,
+            "boundary_safety": 0.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            994,
+            0,
+            3268,
+            2842
+          ],
+          "crop_box_norm_after": [
+            0.23316912972085385,
+            0.0,
+            0.7665962936898898,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.6251,
+          "main_subject_visibility_after": 0.6261,
+          "face_visibility_before": [
+            0.9354,
+            1.0
+          ],
+          "face_visibility_after": [
+            0.9384,
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 1,
+          "faces_total": 2,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_centered_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_centered_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_centered_story_9_16.png",
+          "composition_score": 0.5547,
+          "breakdown": {
+            "face_preservation": 0.2,
+            "subject_coverage": 0.6166,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7142,
+            "boundary_safety": 0.0,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.6037
+          },
+          "crop_box_after": [
+            702,
+            0,
+            2301,
+            2842
+          ],
+          "crop_box_norm_after": [
+            0.16467276565798733,
+            0.0,
+            0.5397607318789585,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.2813,
+          "main_subject_visibility_after": 0.924,
+          "face_visibility_before": [
+            0.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            0.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 1,
+          "faces_total": 2,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_centered_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_centered_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_centered_landscape_16_9.png",
+          "composition_score": 0.7952,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7544,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5959
+          },
+          "crop_box_after": [
+            0,
+            444,
+            4263,
+            2842
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.1562280084447572,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.8544,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 2,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "337fffa77d2441ea85cf82622ae983ed.jpg",
+      "label": "two_people_right_of_center",
+      "width": 4094,
+      "height": 2729,
+      "orientation": "landscape",
+      "scene_type": "group",
+      "scene_type_confidence": 0.8,
+      "confidence": 1.0,
+      "faces_detected": 2,
+      "people_detected": 3,
+      "objects_detected": 1,
+      "focal_point": [
+        0.633767348973529,
+        0.4126796134322465
+      ],
+      "focal_region": [
+        0.3999220038089277,
+        0.06911822203359747,
+        0.8885389107917074,
+        1.0
+      ],
+      "main_subject": [
+        0.5799220038089277,
+        0.24911822203359746,
+        0.7085389107917074,
+        0.945131698166682
+      ],
+      "face_boxes": [
+        [
+          0.6041534080933989,
+          0.2690908754208272,
+          0.637388258255221,
+          0.339000418143379
+        ],
+        [
+          0.39690655222390997,
+          0.2132168913464181,
+          0.4310276793688172,
+          0.29792286337142726
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_right_of_center_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_right_of_center_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_right_of_center_linkedin_1_1.png",
+          "composition_score": 0.8548,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7537,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5932
+          },
+          "crop_box_after": [
+            1230,
+            0,
+            3959,
+            2729
+          ],
+          "crop_box_norm_after": [
+            0.3004396678065462,
+            0.0,
+            0.9670249145090376,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 2,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_right_of_center_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_right_of_center_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_right_of_center_carousel_4_5.png",
+          "composition_score": 0.852,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7363,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5888
+          },
+          "crop_box_after": [
+            1265,
+            0,
+            3448,
+            2729
+          ],
+          "crop_box_norm_after": [
+            0.3089887640449438,
+            0.0,
+            0.8422081094284318,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 2,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_right_of_center_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_right_of_center_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_right_of_center_story_9_16.png",
+          "composition_score": 0.8023,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 0.955,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7066,
+            "boundary_safety": 0.75,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5904
+          },
+          "crop_box_after": [
+            1406,
+            0,
+            2941,
+            2729
+          ],
+          "crop_box_norm_after": [
+            0.3434294088910601,
+            0.0,
+            0.7183683439179287,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.8352,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 2,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\two_people_right_of_center_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\two_people_right_of_center_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\two_people_right_of_center_landscape_16_9.png",
+          "composition_score": 0.8364,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6296,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5828
+          },
+          "crop_box_after": [
+            0,
+            426,
+            4094,
+            2729
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.15610113594723343,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.9662,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 2,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "1a21ef12381143c285dc506c70383f60.jpg",
+      "label": "large_group_14_faces",
+      "width": 6208,
+      "height": 4139,
+      "orientation": "landscape",
+      "scene_type": "group",
+      "scene_type_confidence": 0.8,
+      "confidence": 1.0,
+      "faces_detected": 14,
+      "people_detected": 12,
+      "objects_detected": 1,
+      "focal_point": [
+        0.3221828909018605,
+        0.6100450844185515
+      ],
+      "focal_region": [
+        0.0,
+        0.2915474422037328,
+        0.3221828909018605,
+        1.0
+      ],
+      "main_subject": [
+        0.0,
+        0.4715474422037328,
+        0.1421828909018605,
+        0.9942451471520899
+      ],
+      "face_boxes": [
+        [
+          0.7130461230720442,
+          0.712048313300314,
+          0.7385638522118637,
+          0.7615519392516308
+        ],
+        [
+          0.25903927911188185,
+          0.5462290507406681,
+          0.2834056972228375,
+          0.5929791196356305
+        ],
+        [
+          0.40767889907679605,
+          0.5289850781061247,
+          0.4258376052699138,
+          0.5656232186405231
+        ],
+        [
+          0.48418300667988884,
+          0.5585726332220947,
+          0.5007641585831789,
+          0.5898643948946002
+        ],
+        [
+          0.4516240149429164,
+          0.6631325359763832,
+          0.4881596516088112,
+          0.7414326636680055
+        ],
+        [
+          0.18617537586959368,
+          0.4720212425348061,
+          0.20235303505179808,
+          0.5102625771057321
+        ],
+        [
+          0.5558892082922238,
+          0.783443549543972,
+          0.5848427605383175,
+          0.8633979231471974
+        ],
+        [
+          0.5651144047373349,
+          0.636453610567921,
+          0.5821661015146786,
+          0.6752819974631553
+        ],
+        [
+          0.8040802945795748,
+          0.667414169145627,
+          0.8177141799140222,
+          0.6921810234016369
+        ],
+        [
+          0.5358535530640907,
+          0.5724585073009785,
+          0.5482891122090447,
+          0.596658688692921
+        ],
+        [
+          0.7525457008597777,
+          0.6711394518981034,
+          0.7658189596589079,
+          0.7014611984514677
+        ],
+        [
+          0.5754955331074822,
+          0.583658716534036,
+          0.5884323120117188,
+          0.6095812130043489
+        ],
+        [
+          0.6126521002386034,
+          0.6166036033952947,
+          0.625285984314594,
+          0.642172187386748
+        ],
+        [
+          0.22122129459971004,
+          0.47616815302043064,
+          0.2355128809348824,
+          0.5081156850235564
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\large_group_14_faces_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\large_group_14_faces_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\large_group_14_faces_linkedin_1_1.png",
+          "composition_score": 0.6941,
+          "breakdown": {
+            "face_preservation": 0.3143,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7372,
+            "boundary_safety": 0.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5861
+          },
+          "crop_box_after": [
+            0,
+            0,
+            4139,
+            4139
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            0.6667203608247423,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 3,
+          "faces_total": 14,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\large_group_14_faces_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\large_group_14_faces_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\large_group_14_faces_carousel_4_5.png",
+          "composition_score": 0.6496,
+          "breakdown": {
+            "face_preservation": 0.1714,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7246,
+            "boundary_safety": 0.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5871
+          },
+          "crop_box_after": [
+            0,
+            0,
+            3311,
+            4139
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            0.5333440721649485,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.1585
+          ],
+          "face_visibility_after": [
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "faces_clipped_before": 4,
+          "faces_clipped_after": 8,
+          "faces_total": 14,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\large_group_14_faces_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\large_group_14_faces_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\large_group_14_faces_story_9_16.png",
+          "composition_score": 0.5667,
+          "breakdown": {
+            "face_preservation": 0.0857,
+            "subject_coverage": 0.8205,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6745,
+            "boundary_safety": 0.0,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.592
+          },
+          "crop_box_after": [
+            0,
+            0,
+            2328,
+            4139
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            0.375,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0,
+            1.0,
+            0.0,
+            1.0,
+            1.0,
+            0.0
+          ],
+          "face_visibility_after": [
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0
+          ],
+          "faces_clipped_before": 6,
+          "faces_clipped_after": 11,
+          "faces_total": 14,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\large_group_14_faces_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\large_group_14_faces_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\large_group_14_faces_landscape_16_9.png",
+          "composition_score": 0.782,
+          "breakdown": {
+            "face_preservation": 0.44,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6678,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5852
+          },
+          "crop_box_after": [
+            0,
+            647,
+            6208,
+            4139
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.15631795119594105,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.8612,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 14,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "09398c5cb81c4f87a814cb92a55b4edd.jpg",
+      "label": "group_10_faces_centered",
+      "width": 4602,
+      "height": 3068,
+      "orientation": "landscape",
+      "scene_type": "group",
+      "scene_type_confidence": 0.8,
+      "confidence": 1.0,
+      "faces_detected": 10,
+      "people_detected": 10,
+      "objects_detected": 2,
+      "focal_point": [
+        0.4964275170781725,
+        0.5431030005637532
+      ],
+      "focal_region": [
+        0.4964275170781725,
+        0.33795293019678946,
+        1.0,
+        1.0
+      ],
+      "main_subject": [
+        0.6764275170781725,
+        0.5179529301967895,
+        0.9844481042549436,
+        0.9932823131417047
+      ],
+      "face_boxes": [
+        [
+          0.4334725285032323,
+          0.4034056582693326,
+          0.48988657275369407,
+          0.5212154463030679
+        ],
+        [
+          0.07700248098228352,
+          0.41688985215327573,
+          0.12571634742706975,
+          0.5157030645218791
+        ],
+        [
+          0.003301906461355117,
+          0.4225163465994744,
+          0.05791181276695255,
+          0.5280623653566044
+        ],
+        [
+          0.3480389332678048,
+          0.46327720751507495,
+          0.4191140942032676,
+          0.59247029091886
+        ],
+        [
+          0.1327190772184648,
+          0.3812168723134982,
+          0.1835374761694983,
+          0.479812801117381
+        ],
+        [
+          0.16662694474294465,
+          0.36090262958869784,
+          0.21022216054161233,
+          0.45400304682407105
+        ],
+        [
+          0.7995512099019448,
+          0.45334101034112206,
+          0.9025006748085072,
+          0.7230577928923566
+        ],
+        [
+          0.855859894899636,
+          0.3810336076917984,
+          0.9049860072726532,
+          0.47951005241861555
+        ],
+        [
+          0.5370006204843003,
+          0.3833834612074234,
+          0.5759864618134778,
+          0.47608213660925275
+        ],
+        [
+          0.4796887413930085,
+          0.43603794142662156,
+          0.5224558446056062,
+          0.5193666858499022
+        ]
+      ],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_10_faces_centered_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_10_faces_centered_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_10_faces_centered_linkedin_1_1.png",
+          "composition_score": 0.5741,
+          "breakdown": {
+            "face_preservation": 0.32,
+            "subject_coverage": 0.5756,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6501,
+            "boundary_safety": 0.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5943
+          },
+          "crop_box_after": [
+            20,
+            0,
+            3088,
+            3068
+          ],
+          "crop_box_norm_after": [
+            0.004345936549326379,
+            0.0,
+            0.6710126032159931,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.5094,
+          "main_subject_visibility_after": 0.0,
+          "face_visibility_before": [
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.332,
+            0.9991,
+            0.3281,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0,
+            0.9809,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 6,
+          "faces_clipped_after": 3,
+          "faces_total": 10,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_10_faces_centered_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_10_faces_centered_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_10_faces_centered_carousel_4_5.png",
+          "composition_score": 0.4965,
+          "breakdown": {
+            "face_preservation": 0.16,
+            "subject_coverage": 0.3992,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7614,
+            "boundary_safety": 0.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.6007
+          },
+          "crop_box_after": [
+            1192,
+            0,
+            3646,
+            3068
+          ],
+          "crop_box_norm_after": [
+            0.2590178183398522,
+            0.0,
+            0.792264232942199,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.2928,
+          "main_subject_visibility_after": 0.3761,
+          "face_visibility_before": [
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 6,
+          "faces_clipped_after": 6,
+          "faces_total": 10,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_10_faces_centered_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_10_faces_centered_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_10_faces_centered_story_9_16.png",
+          "composition_score": 0.4508,
+          "breakdown": {
+            "face_preservation": 0.16,
+            "subject_coverage": 0.2415,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7662,
+            "boundary_safety": 0.0,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5871
+          },
+          "crop_box_after": [
+            1510,
+            0,
+            3236,
+            3068
+          ],
+          "crop_box_norm_after": [
+            0.32811820947414166,
+            0.0,
+            0.7031725336810083,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0353,
+          "main_subject_visibility_after": 0.0868,
+          "face_visibility_before": [
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 6,
+          "faces_clipped_after": 6,
+          "faces_total": 10,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_10_faces_centered_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_10_faces_centered_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_10_faces_centered_landscape_16_9.png",
+          "composition_score": 0.8009,
+          "breakdown": {
+            "face_preservation": 0.4464,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7797,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5986
+          },
+          "crop_box_after": [
+            0,
+            474,
+            4602,
+            3063
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.1544980443285528,
+            1.0,
+            0.9983702737940026
+          ],
+          "main_subject_visibility_before": 0.8496,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "face_visibility_after": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "faces_clipped_before": 1,
+          "faces_clipped_after": 1,
+          "faces_total": 10,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "0b1e7942548a458a9e7568d33e74f78f.jpg",
+      "label": "subject_top_right_corner",
+      "width": 4737,
+      "height": 3158,
+      "orientation": "landscape",
+      "scene_type": "general",
+      "scene_type_confidence": 0.4,
+      "confidence": 0.49,
+      "faces_detected": 0,
+      "people_detected": 0,
+      "objects_detected": 1,
+      "focal_point": [
+        0.8442774539829984,
+        0.33361928453123196
+      ],
+      "focal_region": [
+        0.44937376100050136,
+        0.0,
+        1.0,
+        0.8926273891456222
+      ],
+      "main_subject": [
+        0.6293737610005014,
+        0.0022988242390338492,
+        0.9994343070508761,
+        0.7126273891456222
+      ],
+      "face_boxes": [],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_top_right_corner_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_top_right_corner_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_top_right_corner_linkedin_1_1.png",
+          "composition_score": 0.7786,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.609,
+            "boundary_safety": 0.75,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5732
+          },
+          "crop_box_after": [
+            1579,
+            0,
+            4737,
+            3158
+          ],
+          "crop_box_norm_after": [
+            0.3333333333333333,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.5509,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_top_right_corner_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_top_right_corner_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_top_right_corner_carousel_4_5.png",
+          "composition_score": 0.7841,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.652,
+            "boundary_safety": 0.75,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5683
+          },
+          "crop_box_after": [
+            2211,
+            0,
+            4737,
+            3158
+          ],
+          "crop_box_norm_after": [
+            0.4667511082963901,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.3706,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_top_right_corner_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_top_right_corner_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_top_right_corner_story_9_16.png",
+          "composition_score": 0.7777,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6822,
+            "boundary_safety": 0.75,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5823
+          },
+          "crop_box_after": [
+            2961,
+            0,
+            4737,
+            3158
+          ],
+          "crop_box_norm_after": [
+            0.6250791640278658,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.1567,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_top_right_corner_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_top_right_corner_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_top_right_corner_landscape_16_9.png",
+          "composition_score": 0.7629,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.4981,
+            "boundary_safety": 0.75,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.572
+          },
+          "crop_box_after": [
+            0,
+            0,
+            4737,
+            2665
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            1.0,
+            0.843888537048765
+          ],
+          "main_subject_visibility_before": 0.8931,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "07a720c2281d462887e4ef15ede9a4fc.jpg",
+      "label": "subject_right_edge_no_faces",
+      "width": 1280,
+      "height": 720,
+      "orientation": "landscape",
+      "scene_type": "general",
+      "scene_type_confidence": 0.4,
+      "confidence": 0.34,
+      "faces_detected": 0,
+      "people_detected": 0,
+      "objects_detected": 0,
+      "focal_point": [
+        0.833203125,
+        0.5555555555555556
+      ],
+      "focal_region": [
+        0.48640625,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "main_subject": [
+        0.66640625,
+        0.17222222222222222,
+        1.0,
+        0.9388888888888889
+      ],
+      "face_boxes": [],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_right_edge_no_faces_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_right_edge_no_faces_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_right_edge_no_faces_linkedin_1_1.png",
+          "composition_score": 0.638,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.7619,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.5688,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            394,
+            0,
+            1114,
+            720
+          ],
+          "crop_box_norm_after": [
+            0.3078125,
+            0.0,
+            0.8703125,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.3443,
+          "main_subject_visibility_after": 0.6112,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_right_edge_no_faces_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_right_edge_no_faces_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_right_edge_no_faces_carousel_4_5.png",
+          "composition_score": 0.5599,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.6547,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.25,
+            "boundary_safety": 0.5,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            466,
+            0,
+            1042,
+            720
+          ],
+          "crop_box_norm_after": [
+            0.3640625,
+            0.0,
+            0.8140625,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.1756,
+          "main_subject_visibility_after": 0.4426,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_right_edge_no_faces_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_right_edge_no_faces_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_right_edge_no_faces_story_9_16.png",
+          "composition_score": 0.5345,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.5277,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.25,
+            "boundary_safety": 0.5,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            552,
+            0,
+            957,
+            720
+          ],
+          "crop_box_norm_after": [
+            0.43125,
+            0.0,
+            0.74765625,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.0,
+          "main_subject_visibility_after": 0.2436,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\subject_right_edge_no_faces_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\subject_right_edge_no_faces_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\subject_right_edge_no_faces_landscape_16_9.png",
+          "composition_score": 0.7656,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 1.0,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.4823,
+            "boundary_safety": 0.75,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.621
+          },
+          "crop_box_after": [
+            0,
+            0,
+            1280,
+            720
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            1.0,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "3d18c865b37d460e851a42895224c052.jpg",
+      "label": "screen_presentation_no_faces",
+      "width": 6082,
+      "height": 4055,
+      "orientation": "landscape",
+      "scene_type": "screen",
+      "scene_type_confidence": 0.6,
+      "confidence": 0.71,
+      "faces_detected": 0,
+      "people_detected": 1,
+      "objects_detected": 4,
+      "focal_point": [
+        0.5145944613452244,
+        0.41876271082473526
+      ],
+      "focal_region": [
+        0.3614107378201044,
+        0.0,
+        0.9936691614343556,
+        0.4496131921431874
+      ],
+      "main_subject": [
+        0.5414107378201044,
+        0.0,
+        0.8136691614343555,
+        0.2696131921431874
+      ],
+      "face_boxes": [],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\screen_presentation_no_faces_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\screen_presentation_no_faces_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\screen_presentation_no_faces_linkedin_1_1.png",
+          "composition_score": 0.7567,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.9394,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7373,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5956
+          },
+          "crop_box_after": [
+            898,
+            0,
+            4953,
+            4055
+          ],
+          "crop_box_norm_after": [
+            0.14764879973692865,
+            0.0,
+            0.8143702729365341,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\screen_presentation_no_faces_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\screen_presentation_no_faces_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\screen_presentation_no_faces_carousel_4_5.png",
+          "composition_score": 0.6622,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.7612,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7427,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            1419,
+            0,
+            4663,
+            4055
+          ],
+          "crop_box_norm_after": [
+            0.23331141072015785,
+            0.0,
+            0.7666885892798422,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.8274,
+          "main_subject_visibility_after": 0.8274,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\screen_presentation_no_faces_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\screen_presentation_no_faces_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\screen_presentation_no_faces_story_9_16.png",
+          "composition_score": 0.5182,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.4915,
+            "saliency_retention": 0.7039,
+            "visual_balance": 0.7373,
+            "boundary_safety": 0.25,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            1785,
+            0,
+            4066,
+            4055
+          ],
+          "crop_box_norm_after": [
+            0.29348898388687933,
+            0.0,
+            0.6685300887865834,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.5364,
+          "main_subject_visibility_after": 0.4669,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": "Could not preserve all important subjects in this aspect ratio; least-destructive crop selected."
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\screen_presentation_no_faces_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\screen_presentation_no_faces_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\screen_presentation_no_faces_landscape_16_9.png",
+          "composition_score": 0.7723,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.9679,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.8096,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5941
+          },
+          "crop_box_after": [
+            0,
+            0,
+            6082,
+            3421
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            1.0,
+            0.8436498150431566
+          ],
+          "main_subject_visibility_before": 0.71,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "70ced33e7e3c4bfa9d998354f315d9d4.jpg",
+      "label": "product_no_faces",
+      "width": 4695,
+      "height": 3130,
+      "orientation": "landscape",
+      "scene_type": "product",
+      "scene_type_confidence": 0.6,
+      "confidence": 0.51,
+      "faces_detected": 0,
+      "people_detected": 0,
+      "objects_detected": 2,
+      "focal_point": [
+        0.6324674567490423,
+        0.47695235761568255
+      ],
+      "focal_region": [
+        0.0,
+        0.0,
+        1.0,
+        1.0
+      ],
+      "main_subject": [
+        0.008414554291258985,
+        0.13804036588333665,
+        0.9927522214456869,
+        0.9871120270067891
+      ],
+      "face_boxes": [],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\product_no_faces_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\product_no_faces_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\product_no_faces_linkedin_1_1.png",
+          "composition_score": 0.6981,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.7792,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.5427,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.6027
+          },
+          "crop_box_after": [
+            0,
+            0,
+            3130,
+            3130
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            0.6666666666666666,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.6773,
+          "main_subject_visibility_after": 0.6687,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\product_no_faces_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\product_no_faces_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\product_no_faces_carousel_4_5.png",
+          "composition_score": 0.5788,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.6888,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.25,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.0
+          },
+          "crop_box_after": [
+            0,
+            0,
+            2504,
+            3130
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            0.5333333333333333,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.5418,
+          "main_subject_visibility_after": 0.5333,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "subject_visibility_forced",
+            "One or more subjects below target visibility; least-destructive compromise crop selected"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\product_no_faces_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\product_no_faces_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\product_no_faces_story_9_16.png",
+          "composition_score": 0.6051,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.5817,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.25,
+            "boundary_safety": 0.5,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.5978
+          },
+          "crop_box_after": [
+            0,
+            0,
+            1761,
+            3130
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.0,
+            0.37507987220447286,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.3808,
+          "main_subject_visibility_after": 0.3725,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\product_no_faces_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\product_no_faces_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\product_no_faces_landscape_16_9.png",
+          "composition_score": 0.7602,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.9958,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6847,
+            "boundary_safety": 0.5,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5922
+          },
+          "crop_box_after": [
+            0,
+            434,
+            4695,
+            3075
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.13865814696485623,
+            1.0,
+            0.9824281150159745
+          ],
+          "main_subject_visibility_before": 0.923,
+          "main_subject_visibility_after": 0.9938,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    },
+    {
+      "file": "f61c9b8817bc41c6be3f49e247c98759.jpg",
+      "label": "group_people_no_faces_detected",
+      "width": 5477,
+      "height": 3651,
+      "orientation": "landscape",
+      "scene_type": "group",
+      "scene_type_confidence": 0.8,
+      "confidence": 0.73,
+      "faces_detected": 0,
+      "people_detected": 8,
+      "objects_detected": 8,
+      "focal_point": [
+        0.2854509419907044,
+        0.3604732768306326
+      ],
+      "focal_region": [
+        0.050593294258946514,
+        0.1606221112366475,
+        0.5639968740015062,
+        0.723710667347131
+      ],
+      "main_subject": [
+        0.2305932942589465,
+        0.3406221112366475,
+        0.3839968740015063,
+        0.5437106673471309
+      ],
+      "face_boxes": [],
+      "formats": [
+        {
+          "format": "linkedin_1_1",
+          "target_w": 1080,
+          "target_h": 1080,
+          "target_ratio": 1.0,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_people_no_faces_detected_linkedin_1_1.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_people_no_faces_detected_linkedin_1_1.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_people_no_faces_detected_linkedin_1_1.png",
+          "composition_score": 0.8785,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.9655,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6379,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.6019
+          },
+          "crop_box_after": [
+            568,
+            0,
+            4219,
+            3651
+          ],
+          "crop_box_norm_after": [
+            0.10370640861785649,
+            0.0,
+            0.7703122147160855,
+            1.0
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        },
+        {
+          "format": "carousel_4_5",
+          "target_w": 1080,
+          "target_h": 1350,
+          "target_ratio": 0.8,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_people_no_faces_detected_carousel_4_5.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_people_no_faces_detected_carousel_4_5.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_people_no_faces_detected_carousel_4_5.png",
+          "composition_score": 0.7915,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.7652,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.6103,
+            "boundary_safety": 0.75,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5915
+          },
+          "crop_box_after": [
+            1131,
+            0,
+            4052,
+            3651
+          ],
+          "crop_box_norm_after": [
+            0.20649990870914733,
+            0.0,
+            0.7398210699287932,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.9821,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "story_9_16",
+          "target_w": 1080,
+          "target_h": 1920,
+          "target_ratio": 0.5625,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_people_no_faces_detected_story_9_16.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_people_no_faces_detected_story_9_16.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_people_no_faces_detected_story_9_16.png",
+          "composition_score": 0.7614,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.6078,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.7037,
+            "boundary_safety": 0.75,
+            "general_scene": 0.7,
+            "semantic_relevance": 0.6081
+          },
+          "crop_box_after": [
+            536,
+            0,
+            2590,
+            3651
+          ],
+          "crop_box_norm_after": [
+            0.0978637940478364,
+            0.0,
+            0.4728866167610005,
+            1.0
+          ],
+          "main_subject_visibility_before": 0.4655,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [
+            "One or more subjects below target visibility; no better crop position available"
+          ],
+          "trade_off": null
+        },
+        {
+          "format": "landscape_16_9",
+          "target_w": 1920,
+          "target_h": 1080,
+          "target_ratio": 1.7778,
+          "before_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\before\\group_people_no_faces_detected_landscape_16_9.jpg",
+          "after_crop": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\crops\\after\\group_people_no_faces_detected_landscape_16_9.jpg",
+          "compare": "C:\\Users\\ASUS\\StepOne--ContentEngine\\real_photo_acceptance\\compare\\group_people_no_faces_detected_landscape_16_9.png",
+          "composition_score": 0.8773,
+          "breakdown": {
+            "face_preservation": 0.6,
+            "subject_coverage": 0.9791,
+            "saliency_retention": 1.0,
+            "visual_balance": 0.607,
+            "boundary_safety": 1.0,
+            "general_scene": 0.9,
+            "semantic_relevance": 0.5974
+          },
+          "crop_box_after": [
+            0,
+            145,
+            5477,
+            3226
+          ],
+          "crop_box_norm_after": [
+            0.0,
+            0.03971514653519584,
+            1.0,
+            0.8835935360175294
+          ],
+          "main_subject_visibility_before": 1.0,
+          "main_subject_visibility_after": 1.0,
+          "face_visibility_before": [],
+          "face_visibility_after": [],
+          "faces_clipped_before": 0,
+          "faces_clipped_after": 0,
+          "faces_total": 0,
+          "warnings": [],
+          "trade_off": null
+        }
+      ]
+    }
+  ]
+}

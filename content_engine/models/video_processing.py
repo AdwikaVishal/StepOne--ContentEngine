@@ -15,15 +15,29 @@ Returns:
 
 import cv2
 import numpy as np
+import time
 from pathlib import Path
 from typing import List, Dict, Optional
 
 try:
     from content_engine.ai_mode import is_cloud_testing
     from content_engine.providers import get_vision_provider
+    from config import CLIP_MODEL_PATH
+    from content_engine.utils.device_manager import get_device_manager
+    from content_engine.utils.model_registry import get_clip, get_clip_device
 except ImportError:
     is_cloud_testing = lambda: False
     get_vision_provider = None  # type: ignore
+    CLIP_MODEL_PATH = "clip-ViT-B-32"  # type: ignore
+
+    def get_device_manager():  # type: ignore
+        return None
+
+    def get_clip(*args, **kwargs):  # type: ignore
+        return None
+
+    def get_clip_device(*args, **kwargs):  # type: ignore
+        return "cpu"
 
 
 class VideoProcessor:
@@ -49,9 +63,11 @@ class VideoProcessor:
     @property
     def clip_model(self):
         if self._clip_model is None:
-            from sentence_transformers import SentenceTransformer
-            from content_engine.utils.mps_safe import MPS_DEVICE
-            self._clip_model = SentenceTransformer("clip-ViT-B-32", device=MPS_DEVICE)
+            # Use the shared, thread-safe CLIP instance instead of loading a
+            # private copy. Prevents concurrent SentenceTransformer
+            # initialization (meta-tensor error) and duplicate VRAM usage.
+            self._clip_model = get_clip()
+            self._clip_device = get_clip_device() or "cpu"
         return self._clip_model
 
     # ── Scene detection ──────────────────────────────────────────────────────────

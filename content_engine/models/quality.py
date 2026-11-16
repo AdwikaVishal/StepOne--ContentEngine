@@ -13,17 +13,30 @@ recalibrate blur and brightness thresholds for the event's lighting.
 
 import cv2
 import numpy as np
+import time
 from pathlib import Path
 from typing import Dict, Optional
 from dataclasses import dataclass, field
 
 try:
-    from config import settings as _cfg
+    from config import settings as _cfg, CLIP_MODEL_PATH
+    from content_engine.utils.device_manager import get_device_manager
+    from content_engine.utils.model_registry import get_clip, get_clip_device
     _DEFAULT_BLUR_THRESHOLD = _cfg.quality_blur_threshold
     _DEFAULT_FACE_CONF     = _cfg.face_confidence_threshold
 except Exception:
     _DEFAULT_BLUR_THRESHOLD = 300.0
     _DEFAULT_FACE_CONF     = 0.35
+    CLIP_MODEL_PATH = "clip-ViT-B-32"  # type: ignore
+
+    def get_device_manager():  # type: ignore
+        return None
+
+    def get_clip(*args, **kwargs):  # type: ignore
+        return None
+
+    def get_clip_device(*args, **kwargs):  # type: ignore
+        return "cpu"
 
 # Calibratable thresholds (mutated by calibrate_batch)
 _blur_threshold: float    = _DEFAULT_BLUR_THRESHOLD
@@ -87,10 +100,11 @@ class QualityAssessor:
     @property
     def clip_model(self):
         if self._clip_model is None:
-            from sentence_transformers import SentenceTransformer
-            from content_engine.utils.mps_safe import MPS_DEVICE
-            self._clip_device = MPS_DEVICE
-            self._clip_model = SentenceTransformer("clip-ViT-B-32", device=self._clip_device)
+            # Use the shared, thread-safe CLIP instance instead of loading a
+            # private copy. Prevents concurrent SentenceTransformer
+            # initialization (meta-tensor error) and duplicate VRAM usage.
+            self._clip_model = get_clip()
+            self._clip_device = get_clip_device() or "cpu"
             self._high_emb = None
         return self._clip_model
 

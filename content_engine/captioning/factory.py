@@ -1,5 +1,10 @@
 """
-Caption provider factory - MLX local inference only (no Groq, no silent fallback to templates).
+Caption provider factory — local inference only (no Groq, no silent fallback to templates).
+
+The PyTorch/transformers TorchCaptionProvider (backed by the shared Qwen model in
+models/qwen/) is the only caption provider. Groq and template-only modes are
+rejected; generation failures are surfaced to the caller, never converted into
+template copy.
 """
 
 import os
@@ -10,36 +15,40 @@ from .providers.template_provider import TemplateProvider
 
 
 class CaptionProviderFactory:
-    """Factory for creating caption providers - MLX local only."""
+    """Factory for creating caption providers — local inference only."""
 
     def __init__(self):
         self._providers = {}
 
-    def get_provider(self, mode: str = "auto", force_local: bool = False,
+    def get_provider(self, mode: str = "auto", force_local: bool = True,
                      allow_groq_fallback: bool = False) -> CaptionProvider:
         """
-        Get caption provider - only MLX local is allowed. Groq is disabled.
+        Get caption provider — only local inference is allowed. Groq is disabled.
+        Template-only mode is not permitted as a generation provider.
         """
         mode = (mode or "local_only").lower()
-        # Force MLX/local only
         if mode == "groq_only":
-            raise CaptionProviderError("Groq is disabled. Only local MLX inference is supported.")
+            raise CaptionProviderError(
+                "Groq is disabled. Only local Qwen inference is supported for captions."
+            )
         if mode == "template_only":
-            raise CaptionProviderError("Template-only mode is not allowed as the sole AI provider. MLX local model is required.")
-        # Always prefer/use local/MLX
+            raise CaptionProviderError(
+                "Template-only mode is not allowed as the sole AI provider. "
+                "A local Qwen model is required before generating captions."
+            )
+        # Always prefer/use local Qwen provider.
         local_provider = self._get_local_provider()
-        if local_provider and local_provider.is_available():
+        if local_provider is not None and local_provider.is_available():
             return local_provider
         raise CaptionProviderError(
-            "Local MLX model is not available. Check MLX_MODEL_ID/MLX_MODEL_PATH configuration. "
-            "Ensure .venv-mlx environment is set up with mlx-lm installed. "
-            "Model must be available before generating captions."
+            "Local Qwen model is not available. Check TORCH_LLM_MODEL/QWEN_MODEL_PATH "
+            "configuration (models/qwen/). Model must be available before generating captions."
         )
 
     def _get_local_provider(self) -> Optional[CaptionProvider]:
         try:
-            from .providers.local_provider import LocalLLMProvider
-            return LocalLLMProvider()
+            from .providers.torch_provider import TorchCaptionProvider
+            return TorchCaptionProvider()
         except Exception:
             return None
 
@@ -49,7 +58,7 @@ class CaptionProviderFactory:
             "mode": os.getenv("CAPTION_PROVIDER_MODE", "local_only"),
             "use_local": True,
             "force_local": True,
-            "local_model": os.getenv("MLX_MODEL_ID", "mlx-community/Qwen2.5-0.5B-Instruct-4bit"),
+            "local_model": os.getenv("TORCH_LLM_MODEL", "models/qwen/"),
             "allow_groq_fallback": False,
         }
 
@@ -67,5 +76,5 @@ def get_caption_provider(mode: Optional[str] = None, **kwargs) -> CaptionProvide
 
 
 def get_template_provider():
-    """Get template provider only for explicit labeled previews."""
+    """Get template provider only for explicit labeled previews (never generation)."""
     return TemplateProvider()

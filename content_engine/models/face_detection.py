@@ -12,16 +12,32 @@ Returns:
 """
 
 import numpy as np
+import threading
+import time
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
 try:
-    from config import settings as _cfg
+    from config import settings as _cfg, YOLOV11_FACE_MODEL_PATH
+    from content_engine.utils.device_manager import get_device_manager
+    from content_engine.utils.mps_safe import register_model, MPS_DEVICE, recommend_device
     _DEFAULT_FACE_CONF = _cfg.face_confidence_threshold
     _SIZE_WEIGHT_THRESH = _cfg.face_size_weight_threshold
 except Exception:
     _DEFAULT_FACE_CONF = 0.35
     _SIZE_WEIGHT_THRESH = 0.05
+    YOLOV11_FACE_MODEL_PATH = "models/yolov11-face/model.pt"  # type: ignore
+
+    def get_device_manager():  # type: ignore
+        return None
+
+    def register_model(*args, **kwargs):  # type: ignore
+        pass
+
+    MPS_DEVICE = "cpu"  # type: ignore
+
+    def recommend_device(*args, **kwargs):  # type: ignore
+        return "cpu"
 
 # Size-weight thresholds (item 13)
 _SIZE_WEIGHT_MIN_PCT = 0.02   # <2% of image → 0.4 weight
@@ -35,25 +51,83 @@ class FaceDetector:
     Item 13: Prevents background crowds from outscoring foreground portraits.
     A face covering 2% of a 1000×1000 image (20×20 px) is weighted 0.4.
     A face covering 10% (100×100 px) is weighted 1.0.
+
+    An already-loaded :class:`ultralytics.YOLO` model instance may be injected
+    (e.g. by :class:`content_engine.layout_assembler.LayoutAssembler`) so that
+    the YOLOv11-face weights are loaded exactly once per process and shared
+    between components instead of being duplicated.
     """
 
-    def __init__(self, confidence: float = _DEFAULT_FACE_CONF):
-        self._model     = None
+    def __init__(self, confidence: float = _DEFAULT_FACE_CONF, model=None):
+        self._model     = model
         self._confidence = confidence
+        # Serialize YOLO inference: Ultralytics' predictor is not thread-safe and
+        # concurrent .to(device) / predict calls on CUDA can corrupt device state
+        # (meta-tensor "Cannot copy out of meta tensor" errors). One lock guards
+        # both lazy loading and every predict call so the model is never touched
+        # by two threads at once.
+        self._predict_lock = threading.RLock()
 
     # ── Model lazy-load ─────────────────────────────────────────────────────────
 
     @property
     def model(self):
         if self._model is None:
-            from ultralytics import YOLO
-            from huggingface_hub import hf_hub_download
+            with self._predict_lock:
+                # Double-check after acquiring the lock.
+                if self._model is None:
+                    from ultralytics import YOLO
+                    from config import YOLOV11_FACE_MODEL_PATH
 
-            model_path = hf_hub_download(
-                repo_id="AdamCodd/YOLOv11n-face-detection",
-                filename="model.pt",
-            )
-            self._model = YOLO(model_path)
+                    t0 = time.perf_counter()
+                    device = MPS_DEVICE
+                    self._model = YOLO(YOLOV11_FACE_MODEL_PATH)
+
+                    # Place the model explicitly on the selected device once, at
+                    # load time. Avoids repeated .to(device) calls inside predict
+                    # that can fail on meta/empty tensors under concurrency.
+                    try:
+                        self._model.to(device)
+                    except Exception:
+                        # If .to() fails on a meta/empty tensor, rebuild on the
+                        # target device with to_empty semantics via the YOLO
+                        # constructor's device argument.
+                        self._model = YOLO(YOLOV11_FACE_MODEL_PATH)
+                        self._model.to(device)
+                    load_time = time.perf_counter() - t0
+
+                    # Register with DeviceManager
+                    estimated_vram = 50.0 if device.startswith("cuda") else 0.0
+                    estimated_ram = 3.0
+                    dm = get_device_manager()
+                    if dm is not None:
+                        dm.register_model(
+                            "yolov11_face",
+                            model=self._model,
+                            device=device,
+                            vram_mb=estimated_vram,
+                            ram_mb=estimated_ram,
+                            load_time_seconds=load_time,
+                        )
+        else:
+            # Model was injected (shared copy): place it on the device and
+            # register it once so memory tracking stays accurate without
+            # loading a duplicate set of weights.
+            device = MPS_DEVICE
+            try:
+                self._model.to(device)
+            except Exception:
+                pass
+            dm = get_device_manager()
+            if dm is not None and not dm.is_model_loaded("yolov11_face"):
+                dm.register_model(
+                    "yolov11_face",
+                    model=self._model,
+                    device=device,
+                    vram_mb=50.0,
+                    ram_mb=3.0,
+                    load_time_seconds=0.0,
+                )
         return self._model
 
     # ── Item 13: Size-aware weighting ────────────────────────────────────────────
@@ -122,17 +196,26 @@ class FaceDetector:
 
         img_h, img_w = img.shape[:2]
 
-        # Run YOLOv11n — pass device explicitly so MPS is used when available
-        from content_engine.utils.mps_safe import MPS_DEVICE, empty_cache
+        # Run YOLOv11n on the device the model was placed on at load time.
+        # Serialized with self._predict_lock so concurrent pipeline workers never
+        # drive the shared Ultralytics predictor at the same time (which can
+        # corrupt CUDA device state and surface as a meta-tensor error).
+        from content_engine.utils.mps_safe import empty_cache
         try:
-            results = self.model.predict(
-                image_path, conf=self._confidence, verbose=False, device=MPS_DEVICE
-            )
+            with self._predict_lock:
+                results = self.model.predict(image_path, conf=self._confidence, verbose=False)
         except Exception:
-            # MPS failure — fall back to CPU silently
-            results = self.model.predict(
-                image_path, conf=self._confidence, verbose=False, device="cpu"
-            )
+            # CPU fallback for unsupported CUDA operations.
+            try:
+                with self._predict_lock:
+                    self._model.to("cpu")
+                    results = self.model.predict(image_path, conf=self._confidence, verbose=False)
+            except Exception:
+                return {
+                    "face_count": 0, "confidences": [],
+                    "bboxes": [], "bboxes_norm": [],
+                    "weights": [], "weighted_score": 0.0,
+                }
         finally:
             empty_cache()
 

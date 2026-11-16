@@ -40,8 +40,10 @@ class GroqVisionProvider:
     """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or require_cloud_key("GROQ_API_KEY")
-        self._client = None
+        raise ConfigurationError(
+            "Groq vision inference is disabled. Content Engine uses local vision "
+            "models (Florence-2 + CLIP + BLIP) only. Groq cannot be instantiated."
+        )
 
     def _get_client(self):
         if self._client is None:

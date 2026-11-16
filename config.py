@@ -1,5 +1,5 @@
-"""
-Central configuration — reads from .env file.
+﻿"""
+Central configuration â€” reads from .env file.
 Import this everywhere instead of hardcoding values.
 
 Usage:
@@ -29,27 +29,27 @@ def _list(key: str, default: str) -> List[str]:
 
 class Settings:
     def __init__(self):
-        # ── Server ────────────────────────────────────────────────────────────
+        # â”€â”€ Server â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.api_host: str   = os.getenv("API_HOST", "0.0.0.0")
         self.api_port: int   = int(os.getenv("API_PORT", "8000"))
         self.api_workers: int = int(os.getenv("API_WORKERS", "1"))
         self.log_level: str  = os.getenv("LOG_LEVEL", "INFO")
 
-        # ── CORS ──────────────────────────────────────────────────────────────
+        # â”€â”€ CORS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.cors_origins: List[str] = _list("CORS_ORIGINS", "http://localhost:5173")
 
-        # ── Storage ───────────────────────────────────────────────────────────
+        # â”€â”€ Storage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.upload_dir: Path      = Path(os.getenv("UPLOAD_DIR",      "uploads"))
         self.output_dir: Path      = Path(os.getenv("OUTPUT_DIR",      "output"))
         self.model_cache_dir: Path = Path(os.getenv("MODEL_CACHE_DIR", "models"))
         self.log_dir: Path         = Path(os.getenv("LOG_DIR",         "logs"))
         self.max_file_size_mb: int = int(os.getenv("MAX_FILE_SIZE_MB", "200"))
 
-        # ── Cleanup ───────────────────────────────────────────────────────────
+        # â”€â”€ Cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.upload_retention_days: int = int(os.getenv("UPLOAD_RETENTION_DAYS", "7"))
         self.output_retention_days: int = int(os.getenv("OUTPUT_RETENTION_DAYS", "30"))
 
-        # ── ML thresholds ─────────────────────────────────────────────────────
+        # â”€â”€ ML thresholds â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.face_confidence_threshold: float  = float(os.getenv("FACE_CONFIDENCE_THRESHOLD", "0.35"))
         self.quality_min_score: float          = float(os.getenv("QUALITY_MIN_SCORE", "0.30"))
         self.quality_blur_threshold: float     = float(os.getenv("QUALITY_BLUR_THRESHOLD", "300"))
@@ -57,11 +57,12 @@ class Settings:
         self.brand_similarity_threshold: float = float(os.getenv("BRAND_SIMILARITY_THRESHOLD", "0.45"))
         self.brand_use_logo_detection: bool    = os.getenv("BRAND_USE_LOGO_DETECTION", "true").lower() == "true"
         self.brand_use_llm_fallback: bool      = os.getenv("BRAND_USE_LLM_FALLBACK", "true").lower() == "true"
+        self.pipeline_max_workers: int = int(os.getenv("CE_PIPELINE_MAX_WORKERS", "2"))
 
-        # ── Redis ─────────────────────────────────────────────────────────────
+        # â”€â”€ Redis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-        # ── Celery ────────────────────────────────────────────────────────────
+        # â”€â”€ Celery â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.celery_broker_url: str     = os.getenv("CELERY_BROKER_URL",     "redis://localhost:6379/0")
         self.celery_result_backend: str = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
         self.celery_worker_concurrency: int         = int(os.getenv("CELERY_WORKER_CONCURRENCY", "1"))
@@ -69,38 +70,38 @@ class Settings:
         self.celery_task_time_limit: int      = int(os.getenv("CELERY_TASK_TIME_LIMIT", "600"))
         self.celery_task_soft_time_limit: int = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "540"))
 
-        # ── Flower ────────────────────────────────────────────────────────────
+        # â”€â”€ Flower â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.flower_port: int      = int(os.getenv("FLOWER_PORT", "5555"))
         self.flower_enabled: bool  = os.getenv("FLOWER_ENABLED", "true").lower() == "true"
         self.flower_user: str      = os.getenv("FLOWER_USER", "admin")
         self.flower_password: str  = os.getenv("FLOWER_PASSWORD", "admin")
 
-        # ── Monitoring ────────────────────────────────────────────────────────
+        # â”€â”€ Monitoring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.sentry_dsn: str = os.getenv("SENTRY_DSN", "")
 
-        # ── Groq LLM ──────────────────────────────────────────────────────────
+        # â”€â”€ Groq LLM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.groq_api_key: str      = os.getenv("GROQ_API_KEY", "")
         self.groq_model: str        = os.getenv("GROQ_MODEL", "qwen/qwen3.8-27b")
         self.groq_service_tier: str = os.getenv("GROQ_SERVICE_TIER", "on_demand")
         self.groq_temperature: float = float(os.getenv("GROQ_TEMPERATURE", "0.7"))
 
-        # ── Groq Vision ───────────────────────────────────────────────────────
+        # â”€â”€ Groq Vision â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         # Only required when AI_EXECUTION_MODE=cloud_testing
         self.groq_vision_model: str = os.getenv("GROQ_VISION_MODEL", "qwen/qwen3.8-27b")
 
-        # ── AI Execution Mode ─────────────────────────────────────────────────
+        # â”€â”€ AI Execution Mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         # local: MLX Qwen + local vision models (final production architecture)
         # cloud_testing: Groq + Gemini APIs, local models bypassed for routed features
         self.ai_execution_mode: str = os.getenv("AI_EXECUTION_MODE", "local")
         self.cloud_llm_provider: str = os.getenv("CLOUD_LLM_PROVIDER", "groq")
         self.cloud_vision_provider: str = os.getenv("CLOUD_VISION_PROVIDER", "gemini")
 
-        # ── Cloud API keys ────────────────────────────────────────────────────
+        # â”€â”€ Cloud API keys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         # Only required when AI_EXECUTION_MODE=cloud_testing
         self.gemini_api_key: str = os.getenv("GEMINI_API_KEY", "")
         self.gemini_model: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
-        # ── Allowed MIME types ────────────────────────────────────────────────
+        # â”€â”€ Allowed MIME types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         self.allowed_image_types: List[str] = [
             "image/jpeg", "image/png", "image/webp", "image/bmp", "image/tiff",
             "image/gif", "image/heic", "image/heif", "image/avif",
@@ -126,7 +127,7 @@ class Settings:
             ".divx", ".dv", ".vob",
         ]
 
-    # ── Derived properties ────────────────────────────────────────────────────
+    # â”€â”€ Derived properties â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     @property
     def max_file_size_bytes(self) -> int:
         return self.max_file_size_mb * 1024 * 1024
@@ -147,7 +148,7 @@ for _d in (settings.upload_dir, settings.output_dir, settings.log_dir):
     _d.mkdir(parents=True, exist_ok=True)
 
 
-# ── Caption Provider Settings ──────────────────────────────────────────────────
+# â”€â”€ Caption Provider Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CAPTION_PROVIDER_MODE = os.getenv("CAPTION_PROVIDER_MODE", "auto")
 CAPTION_USE_LOCAL = os.getenv("CAPTION_USE_LOCAL", "false").lower() == "true"
 CAPTION_FORCE_LOCAL = os.getenv("CAPTION_FORCE_LOCAL", "false").lower() == "true"
@@ -156,7 +157,7 @@ CAPTION_ALLOW_GROQ_FALLBACK = os.getenv("CAPTION_ALLOW_GROQ_FALLBACK", "true").l
 CAPTION_HISTORICAL_DATA_PATH = os.getenv("CAPTION_HISTORICAL_DATA_PATH", "data/historical")
 
 
-# ── Qwen Local Model Settings ─────────────────────────────────────────────────
+# â”€â”€ Qwen Local Model Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CAPTION_LOCAL_MODEL = os.getenv("CAPTION_LOCAL_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 CAPTION_LOCAL_MODEL_PATH = os.getenv("CAPTION_LOCAL_MODEL_PATH", "")
 CAPTION_MAX_NEW_TOKENS = int(os.getenv("CAPTION_MAX_NEW_TOKENS", "256"))
@@ -173,6 +174,29 @@ BLIP_MAX_PIXELS = int(os.getenv("BLIP_MAX_PIXELS", "40000000"))
 BLIP_MAX_BATCH_IMAGES = int(os.getenv("BLIP_MAX_BATCH_IMAGES", "20"))
 
 
-# ── Qwen Local Model Settings (Task 5) ─────────────────────────────────────────
+# â”€â”€ Qwen Local Model Settings (Task 5) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 CAPTION_LOCAL_MODEL = os.getenv("CAPTION_LOCAL_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
 CAPTION_LOCAL_MODEL_PATH = os.getenv("CAPTION_LOCAL_MODEL_PATH", "")
+
+# â”€â”€ Qwen / Torch LLM Local Model Paths (Windows migration) â”€â”€
+# The Qwen 1.5B-Instruct model is stored locally under models/qwen/ for offline
+# operation. These paths can be overridden via environment variables.
+_PROJECT_ROOT = Path(__file__).parent.resolve()
+QWEN_MODEL_PATH = os.getenv("QWEN_MODEL_PATH", str(_PROJECT_ROOT / "models" / "qwen"))
+TORCH_LLM_MODEL = os.getenv("TORCH_LLM_MODEL", str(_PROJECT_ROOT / "models" / "qwen"))
+TORCH_LLM_DEVICE = os.getenv("TORCH_LLM_DEVICE", "cuda")
+TORCH_LLM_LOCAL_FILES_ONLY = os.getenv("TORCH_LLM_LOCAL_FILES_ONLY", "true").lower() == "true"
+TORCH_LLM_MAX_CONTEXT = int(os.getenv("TORCH_LLM_MAX_CONTEXT", "4096"))
+TORCH_LLM_DTYPE = os.getenv("TORCH_LLM_DTYPE", os.getenv("TORCH_DTYPE", "float16"))
+
+# â”€â”€ Local Model Paths (Windows migration) â”€â”€
+# All production models stored locally under models/ for offline operation.
+# Each path can be overridden via environment variable of the same name.
+_PROJECT_ROOT = Path(__file__).parent.resolve()
+CLIP_MODEL_PATH = os.getenv("CLIP_MODEL_PATH", str(_PROJECT_ROOT / "models" / "clip"))
+DINOV2_MODEL_PATH = os.getenv("DINOV2_MODEL_PATH", str(_PROJECT_ROOT / "models" / "dinov2"))
+FLORENCE_MODEL_PATH = os.getenv("FLORENCE_MODEL_PATH", str(_PROJECT_ROOT / "models" / "florence"))
+BLIP_MODEL_PATH = os.getenv("BLIP_MODEL_PATH", str(_PROJECT_ROOT / "models" / "blip"))
+YOLOV8_MODEL_PATH = os.getenv("YOLOV8_MODEL_PATH", str(_PROJECT_ROOT / "models" / "yolov8" / "yolov8n.pt"))
+YOLOV11_FACE_MODEL_PATH = os.getenv("YOLOV11_FACE_MODEL_PATH", str(_PROJECT_ROOT / "models" / "yolov11-face" / "model.pt"))
+

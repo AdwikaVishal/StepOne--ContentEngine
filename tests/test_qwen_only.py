@@ -57,7 +57,7 @@ def test_copy_generator_loads_model_lazily(monkeypatch):
         lambda: _TrackingProvider(),
     )
     generator = CopyGenerator()
-    assert generator.backend == "mlx_local"
+    assert generator.backend == "torch_local"
     assert calls == [], "Model must not load during CopyGenerator construction"
 
 

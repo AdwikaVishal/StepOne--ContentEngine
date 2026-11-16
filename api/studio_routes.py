@@ -314,6 +314,29 @@ async def list_brand_profiles():
     return safe_jsonify({"profiles": profiles})
 
 
+@router.post("/brand-profiles/voice-preview")
+async def preview_brand_voice(request: Request):
+    """Generate a brand voice sample from UNSAVED form values.
+
+    Uses the local Qwen2.5-1.5B-Instruct provider only. Never reads or
+    writes brand profile storage — nothing is persisted by a preview.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=422, detail="Invalid JSON body")
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=422, detail="Voice preview payload must be an object")
+    from content_engine.studio.voice_preview import generate_voice_preview
+    try:
+        result = generate_voice_preview(body)
+    except Exception as e:
+        # Local model missing/unloadable/failed — fail clearly, never fall
+        # back to a hardcoded or external sample.
+        raise HTTPException(status_code=503, detail=f"Local Qwen unavailable: {e}")
+    return safe_jsonify(result)
+
+
 @router.get("/brand-profiles/{profile_id}")
 async def get_brand_profile(profile_id: str):
     profile = storage.get_brand_profile(profile_id)
@@ -356,25 +379,43 @@ async def delete_brand_profile(profile_id: str):
 
 
 @router.post("/brand-profiles/{profile_id}/assets")
-async def upload_brand_asset(profile_id: str, file: UploadFile = File(...), asset_kind: str = Form("reference")):
+async def upload_brand_asset(
+    profile_id: str,
+    file: UploadFile = File(...),
+    asset_kind: str = Form("reference"),
+    category: str = Form("other"),
+    notes: str = Form(""),
+):
     profile = storage.get_brand_profile(profile_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Brand profile not found")
     if asset_kind not in {"logo", "reference"}:
         raise HTTPException(status_code=422, detail="asset_kind must be logo or reference")
+    if asset_kind == "logo":
+        category = "logo"
+    elif category not in StudioStorage.BRAND_ASSET_CATEGORIES:
+        raise HTTPException(status_code=422, detail=f"Unknown brand asset category: {category}")
     content = await file.read()
     if not content or len(content) > settings.max_file_size_bytes:
         raise HTTPException(status_code=422, detail="Brand asset is empty or exceeds the upload limit")
     try:
         path = storage.save_brand_asset(profile_id, file.filename or "brand-asset.png", content)
+        entry = storage.record_brand_asset(
+            profile_id,
+            path,
+            kind=asset_kind,
+            category=category,
+            original_name=file.filename or "",
+            notes=notes or "",
+        )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     if asset_kind == "logo":
         profile["logo_path"] = path
     else:
         profile.setdefault("visual_references", []).append(path)
-    storage.save_brand_profile(profile)
-    return safe_jsonify({"profile": profile, "asset_path": path})
+    profile = storage.save_brand_profile(profile)
+    return safe_jsonify({"profile": profile, "asset_path": path, "asset": entry})
 
 
 @router.post("/brand-profiles/{profile_id}/duplicate")

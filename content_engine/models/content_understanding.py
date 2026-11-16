@@ -14,6 +14,7 @@ Returns:
 """
 
 import json
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -27,9 +28,23 @@ DEFAULT_EVENT_CONCEPTS = [
 try:
     from content_engine.ai_mode import is_cloud_testing
     from content_engine.providers import get_vision_provider
+    from config import CLIP_MODEL_PATH, FLORENCE_MODEL_PATH
+    from content_engine.utils.device_manager import get_device_manager
+    from content_engine.utils.model_registry import get_clip, get_clip_device
 except ImportError:
     is_cloud_testing = lambda: False
     get_vision_provider = None  # type: ignore
+    CLIP_MODEL_PATH = "clip-ViT-B-32"  # type: ignore
+    FLORENCE_MODEL_PATH = "microsoft/Florence-2-base"  # type: ignore
+
+    def get_device_manager():  # type: ignore
+        return None
+
+    def get_clip(*args, **kwargs):  # type: ignore
+        return None
+
+    def get_clip_device(*args, **kwargs):  # type: ignore
+        return "cpu"
 
 
 def _load_default_weights() -> Dict[str, float]:
@@ -85,26 +100,47 @@ class ContentUnderstander:
             from transformers import AutoModelForCausalLM, AutoProcessor
             from content_engine.utils.mps_safe import FLORENCE_DEVICE, FLORENCE_DTYPE
 
+            t0 = time.perf_counter()
             self._florence_model = AutoModelForCausalLM.from_pretrained(
-                "microsoft/Florence-2-base",
+                FLORENCE_MODEL_PATH,
                 torch_dtype=FLORENCE_DTYPE,
                 trust_remote_code=True,
                 attn_implementation="eager",
+                local_files_only=True,
             ).to(FLORENCE_DEVICE)
 
             self._florence_processor = AutoProcessor.from_pretrained(
-                "microsoft/Florence-2-base",
+                FLORENCE_MODEL_PATH,
                 trust_remote_code=True,
+                local_files_only=True,
             )
+            model = self._florence_model
+            model.eval()
+            load_time = time.perf_counter() - t0
+
+            # Register with DeviceManager (Florence-2 stays on CPU)
+            dm = get_device_manager()
+            if dm is not None:
+                dm.register_model(
+                    "florence",
+                    model=model,
+                    device=FLORENCE_DEVICE,
+                    vram_mb=0.0,  # CPU model, no VRAM
+                    ram_mb=932.0,  # measured baseline
+                    load_time_seconds=load_time,
+                )
         return self._florence_model, self._florence_processor
 
     @property
     def clip(self):
-        """Load CLIP model on first use — MPS when available."""
+        """Shared CLIP model (loaded once via the model registry).
+
+        Device is selected by the registry/DeviceManager (VRAM-aware).
+        All components reuse the same SentenceTransformer instance.
+        """
         if self._clip_model is None:
-            from sentence_transformers import SentenceTransformer
-            from content_engine.utils.mps_safe import MPS_DEVICE
-            self._clip_model = SentenceTransformer("clip-ViT-B-32", device=MPS_DEVICE)
+            self._clip_model = get_clip()
+            self._clip_device = get_clip_device() or "cpu"
         return self._clip_model
 
     # ── Object detection ────────────────────────────────────────────────────────
@@ -114,6 +150,7 @@ class ContentUnderstander:
         Run Florence-2 <OD> task to extract scene labels.
         Returns list of detected labels (e.g., ["person", "stage", "audience"]).
         """
+        import torch
         from PIL import Image
 
         model, processor = self.florence

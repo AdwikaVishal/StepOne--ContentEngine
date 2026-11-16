@@ -1,9 +1,9 @@
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import type React from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, AlertCircle, BarChart3, Home, FileText, Sparkles, Palette } from 'lucide-react'
+import { Zap, AlertCircle, BarChart3, Home, FileText, Sparkles, Palette, RefreshCw, ScanSearch } from 'lucide-react'
 
-import { checkHealth, generateCustom } from './api'
+import { checkHealth, generateCustom, getJobStatus, getJobResult } from './api'
 import { ThemeProvider, useTheme } from './contexts/ThemeContext'
 import { JobProvider } from './contexts/JobContext'
 import { AnalyticsProvider } from './contexts/AnalyticsContext'
@@ -13,16 +13,17 @@ import BottomNav from './components/navigation/BottomNav'
 import { useIsMobile } from './hooks/useMediaQuery'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { Skeleton } from './components/ui/Skeleton'
+import { AnimatedBtn } from './components/ui'
 
 const StudioPage    = lazy(() => import('./pages/StudioPage'))
 const ResultsPage   = lazy(() => import('./pages/ResultsPage'))
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage'))
 const AssetSelectionPage = lazy(() => import('./pages/AssetSelectionPage'))
-const StudioMultiImagePage = lazy(() => import('./pages/StudioMultiImagePage'))
 import { PhotoIntelligencePage } from './pages/PhotoIntelligencePage'
 import { BrandProfilesPage } from './pages/BrandProfilesPage'
+import { BrandIntelligencePage } from './pages/brandintel/BrandIntelligencePage'
 
-export type View = 'studio' | 'studio-multi' | 'asset-selection' | 'results' | 'analytics' | 'photo-intelligence' | 'brand-profiles'
+export type View = 'studio' | 'asset-selection' | 'results' | 'analytics' | 'photo-intelligence' | 'brand-profiles' | 'brand-intelligence'
 
 const PageFallback = () => (
   <div style={{ maxWidth: 860, margin: '0 auto', padding: '40px 24px' }}>
@@ -35,23 +36,104 @@ const PageFallback = () => (
 )
 
 function AppInner() {
-  const [view, setView]       = useState<View>('studio')
-  const [result, setResult]   = useState<any>(null)
-  const [eventName, setEvent] = useState('')
-  const [apiOk, setApiOk]     = useState<boolean | null>(null)
+  const [view, setView]          = useState<View>('studio')
+  const [result, setResult]      = useState<any>(null)
+  const [eventName, setEvent]    = useState('')
+  const [apiOk, setApiOk]        = useState<boolean | null>(null)
+  const [isCheckingHealth, setIsCheckingHealth] = useState(false)
   const [studioData, setStudioData] = useState<any>(null)
   const [currentJobId, setCurrentJobId] = useState<string | null>(null)
   useTheme()
   const isMobile = useIsMobile()
 
-  useEffect(() => {
-    checkHealth()
-      .then(() => setApiOk(true))
-      .catch(() => {
-        setApiOk(false)
-        toast.error('Backend offline', 'Start the API server to use the app')
-      })
+  // ── Backend health with retry + backoff ────────────────────────────────────
+  // A single temporary network error must not be treated as permanent failure.
+  // We check once on mount and again when the user clicks Retry — no frequent
+  // polling, so we never hammer an offline backend.
+  const checkHealthWithRetry = useCallback(async (retries = 3, baseDelay = 1500): Promise<boolean> => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        await checkHealth()
+        return true
+      } catch {
+        if (i < retries - 1) {
+          await new Promise(resolve => setTimeout(resolve, baseDelay * (i + 1)))
+        }
+      }
+    }
+    return false
   }, [])
+
+  // Recover an existing job from sessionStorage now that the backend is online.
+  const recoverExistingJob = useCallback(async () => {
+    const storedJobId = sessionStorage.getItem('ce_active_job_id')
+    if (!storedJobId) return
+    try {
+      const status = await getJobStatus(storedJobId)
+      setCurrentJobId(storedJobId)
+
+      if (status.status === 'completed' || status.status === 'SUCCESS') {
+        try {
+          const jobResult = await getJobResult(storedJobId)
+          setResult(jobResult)
+          setEvent(jobResult.event || 'Event')
+          setView('results')
+          sessionStorage.removeItem('ce_active_job_id')
+          sessionStorage.removeItem('ce_active_job_event')
+          toast.success('Content generated!', `${jobResult.event || 'Event'} is ready to review`)
+        } catch {
+          toast.error('Results unavailable', 'Your job completed but results could not be retrieved.')
+        }
+      } else if (status.status === 'failed' || status.status === 'FAILURE') {
+        toast.error('Generation failed', status.error ?? 'Job failed')
+        sessionStorage.removeItem('ce_active_job_id')
+        sessionStorage.removeItem('ce_active_job_event')
+      }
+      // If still processing, StudioPage will resume polling via jobId.
+    } catch (e: any) {
+      if (e?.response?.status === 404) {
+        // Job was lost after a backend restart.
+        sessionStorage.removeItem('ce_active_job_id')
+        sessionStorage.removeItem('ce_active_job_event')
+        toast.error('Job no longer available', 'Your previous job is no longer on the server. Start a new generation.')
+      }
+    }
+  }, [])
+
+  const initializeBackend = useCallback(async () => {
+    setIsCheckingHealth(true)
+    try {
+      const ok = await checkHealthWithRetry()
+      setApiOk(ok)
+      if (ok) {
+        await recoverExistingJob()
+      }
+    } finally {
+      setIsCheckingHealth(false)
+    }
+  }, [checkHealthWithRetry, recoverExistingJob])
+
+  const retryConnection = useCallback(async () => {
+    await initializeBackend()
+  }, [initializeBackend])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      setIsCheckingHealth(true)
+      try {
+        const ok = await checkHealthWithRetry()
+        if (cancelled) return
+        setApiOk(ok)
+        if (ok) {
+          await recoverExistingJob()
+        }
+      } finally {
+        if (!cancelled) setIsCheckingHealth(false)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [checkHealthWithRetry, recoverExistingJob])
 
   const handleResult = (r: any, name: string) => {
     setResult(r)
@@ -63,11 +145,14 @@ function AppInner() {
   const handleStudioGenerate = (data: any) => {
     setStudioData(data)
     setCurrentJobId(data.jobId)
-    if (data.result?.mode === 'gff') {
-      setResult(data.result)
-      setEvent(data.eventName || data.result?.event || 'Event')
+    const result = data.result
+    // A completed async generation carries real files/captions — show ResultsPage.
+    const isCompletedGeneration = result && (result.files || result.captions || result.status === 'completed')
+    if (result?.mode === 'gff' || isCompletedGeneration) {
+      setResult(result)
+      setEvent(data.eventName || result?.event || 'Event')
       setView('results')
-      toast.success('Brand content generated!', `${data.eventName || data.result?.event || 'Event'} is ready to review`)
+      toast.success('Content generated!', `${data.eventName || result?.event || 'Event'} is ready to review`)
       return
     }
     setView('asset-selection')
@@ -103,8 +188,8 @@ function AppInner() {
 
   const navItems: { id: View; label: string; icon: React.ReactNode; disabled: boolean }[] = [
     { id: 'studio',    label: 'Studio',    icon: <Home size={14} />,      disabled: false },
-    { id: 'studio-multi', label: 'Social Studio', icon: <Sparkles size={14} />, disabled: false },
     { id: 'brand-profiles', label: 'Brand Profiles', icon: <Palette size={14} />, disabled: false },
+    { id: 'brand-intelligence', label: 'Brand Intelligence', icon: <ScanSearch size={14} />, disabled: false },
     { id: 'results',   label: 'Results',   icon: <FileText size={14} />,  disabled: !result },
     { id: 'analytics', label: 'Analytics', icon: <BarChart3 size={14} />, disabled: false },
   ]
@@ -205,12 +290,17 @@ function AppInner() {
               <div style={{
                 width: 6, height: 6, borderRadius: '50%',
                 background: apiOk === null ? 'var(--yellow)' : apiOk ? 'var(--green)' : 'var(--red)',
-                animation: apiOk === null ? 'pulse 1.5s infinite' : apiOk ? 'none' : 'none',
-                boxShadow: apiOk ? '0 0 6px var(--green)' : 'none',
+                animation: apiOk === null || isCheckingHealth ? 'pulse 1.5s infinite' : apiOk ? 'none' : 'none',
+                boxShadow: apiOk && !isCheckingHealth ? '0 0 6px var(--green)' : 'none',
               }} />
               <span style={{ color: 'var(--t3)', fontWeight: 500 }}>
-                {apiOk === null ? 'Connecting' : apiOk ? 'Live' : 'Offline'}
+                {isCheckingHealth ? 'Checking…' : apiOk === null ? 'Connecting' : apiOk ? 'Live' : 'Offline'}
               </span>
+              {apiOk === false && (
+                <AnimatedBtn variant="ghost" size="sm" label="Retry connection" onClick={retryConnection}>
+                  <RefreshCw size={10} /> Retry
+                </AnimatedBtn>
+              )}
             </div>
           </div>
         </div>
@@ -225,7 +315,7 @@ function AppInner() {
             exit={{ height: 0, opacity: 0 }}
             style={{ background: 'rgba(239,68,68,0.08)', borderBottom: '1px solid rgba(239,68,68,0.2)', overflow: 'hidden' }}
           >
-            <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <AlertCircle size={14} color="#fca5a5" />
               <span style={{ fontSize: 13, color: '#fca5a5' }}>
                 Backend not reachable. Run:{' '}
@@ -233,6 +323,9 @@ function AppInner() {
                   uvicorn api.main:app --reload
                 </code>
               </span>
+              <AnimatedBtn variant="ghost" size="sm" label="Retry connection" onClick={retryConnection}>
+                <RefreshCw size={12} /> Retry
+              </AnimatedBtn>
             </div>
           </motion.div>
         )}
@@ -247,10 +340,9 @@ function AppInner() {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3, ease: [.16,1,.3,1] }}
               >
-                <StudioPage onResult={handleStudioGenerate} />
+                <StudioPage onResult={handleStudioGenerate} apiOk={apiOk} onRetryConnection={retryConnection} />
               </motion.div>
             )}
-            {view === 'studio-multi' && <StudioMultiImagePage onBack={() => setView('studio')} />}
             {view === 'asset-selection' && (
               <motion.div key="asset-selection"
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -279,6 +371,14 @@ function AppInner() {
                 exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3, ease: [.16,1,.3,1] }}
               >
                 <BrandProfilesPage onBack={() => setView('studio')} />
+              </motion.div>
+            )}
+            {view === 'brand-intelligence' && (
+              <motion.div key="brand-intelligence"
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3, ease: [.16,1,.3,1] }}
+              >
+                <BrandIntelligencePage />
               </motion.div>
             )}
             {view === 'results' && result && (

@@ -24,6 +24,29 @@ from api.logger import get_logger
 
 logger = get_logger("cleanup")
 
+# ── Protected output subtrees (relative to OUTPUT_DIR, POSIX-style) ──────────
+# These hold persistent user-managed data and must NEVER be age-deleted:
+#   - brand_intelligence/            datasets, predictions, decisions, exports
+#   - studio/brand_profiles/         brand profile JSON (user data)
+#   - studio/brand_assets/           uploaded reference photos and logos
+# Approved as part of Brand Intelligence Phase 1 (requirement F):
+# "Exempt output/brand_intelligence/ from cleanup.py's 30-day cleanup."
+PROTECTED_OUTPUT_PATHS = (
+    "brand_intelligence",
+    "studio/brand_profiles",
+    "studio/brand_assets",
+)
+
+
+def _is_protected(relative_path: str, protected) -> bool:
+    """True when the path IS or is INSIDE a protected subtree."""
+    rel = relative_path.replace("\\", "/").strip("/")
+    for prefix in protected:
+        prefix = prefix.strip("/")
+        if rel == prefix or rel.startswith(prefix + "/"):
+            return True
+    return False
+
 
 def _age_days(path: Path) -> float:
     """Return file/directory age in days based on mtime."""
@@ -35,6 +58,7 @@ def clean_directory(
     max_age_days: int,
     dry_run: bool = False,
     label: str = "",
+    protected: tuple = (),
 ) -> dict:
     """
     Delete files (and empty directories) older than max_age_days.
@@ -44,19 +68,33 @@ def clean_directory(
         max_age_days: Files older than this are deleted.
         dry_run:      If True, log what would be deleted without deleting.
         label:        Human-readable label for log messages.
+        protected:    Relative path prefixes (e.g. "brand_intelligence")
+                      that are skipped entirely, regardless of age.
 
     Returns:
-        Summary dict: {deleted, freed_bytes, errors}
+        Summary dict: {deleted, freed_bytes, errors, skipped_protected}
     """
     if not directory.exists():
-        return {"deleted": 0, "freed_bytes": 0, "errors": 0}
+        return {"deleted": 0, "freed_bytes": 0, "errors": 0, "skipped_protected": 0}
 
     deleted = 0
     freed   = 0
     errors  = 0
+    skipped_protected = 0
 
+    directory_resolved = directory.resolve()
     for path in sorted(directory.rglob("*"), reverse=True):  # deepest first
         try:
+            # Never touch protected subtrees — any depth, any age.
+            if protected:
+                try:
+                    rel = path.resolve().relative_to(directory_resolved).as_posix()
+                except (ValueError, OSError):
+                    rel = path.relative_to(directory).as_posix()
+                if _is_protected(rel, protected):
+                    skipped_protected += 1
+                    continue
+
             age = _age_days(path)
             if age <= max_age_days:
                 continue
@@ -91,7 +129,8 @@ def clean_directory(
             logger.error("cleanup_error", path=str(path), error=str(e))
             errors += 1
 
-    return {"deleted": deleted, "freed_bytes": freed, "errors": errors}
+    return {"deleted": deleted, "freed_bytes": freed, "errors": errors,
+            "skipped_protected": skipped_protected}
 
 
 def run_cleanup(
@@ -118,7 +157,8 @@ def run_cleanup(
         settings.upload_dir, upload_days, dry_run, label="uploads"
     )
     output_result = clean_directory(
-        settings.output_dir, output_days, dry_run, label="output"
+        settings.output_dir, output_days, dry_run, label="output",
+        protected=PROTECTED_OUTPUT_PATHS,
     )
 
     total_freed_mb = (upload_result["freed_bytes"] + output_result["freed_bytes"]) / (1024 * 1024)

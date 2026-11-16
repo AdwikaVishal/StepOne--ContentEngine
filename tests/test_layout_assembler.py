@@ -5,8 +5,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 @pytest.fixture
 def assembler():
-    with patch("content_engine.layout_assembler.hf_hub_download", return_value="/tmp/fake-model.pt"), \
-         patch("content_engine.layout_assembler.YOLO") as mock_yolo:
+    with patch("content_engine.layout_assembler.YOLO") as mock_yolo:
         model = Mock()
         empty_boxes = MagicMock()
         empty_boxes.__len__.return_value = 0

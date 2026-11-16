@@ -100,8 +100,12 @@ dump.rdb
 # Environment variables
 .env
 .env.*
+# Keep the template tracked: this exception MUST come after `.env.*`
+!.env.example
 
 # Node
 node_modules/
 dist/
 build/
+# Locally downloaded AI model assets
+/models/

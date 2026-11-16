@@ -20,6 +20,8 @@ from fastapi.testclient import TestClient
 from starlette.datastructures import UploadFile
 from fastapi import HTTPException
 
+from config import settings
+
 
 # ── Health ────────────────────────────────────────────────────────────────────
 
@@ -287,7 +289,30 @@ def test_generate_async_falls_back_to_apscheduler(client: TestClient):
             data={"event_name": "Test Event", "event_description": "Test"},
         )
 
-    assert response.status_code in (200, 422)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["job_id"] == "apscheduler-job-abc"
+    assert data["status"] == "pending"
+    assert data["backend"] == "apscheduler"
+
+
+def test_generate_async_returns_job_id_promptly(client: TestClient):
+    """Submission must return a job_id immediately without awaiting generation."""
+    with patch("api.main.validate_uploads", return_value=[]), \
+         patch("api.scheduler.submit_generate_job", return_value="http-job-999"), \
+         patch("redis.from_url", side_effect=ConnectionRefusedError("Redis unavailable")):
+
+        response = client.post(
+            "/api/generate/async",
+            files=[("files", ("a.jpg", b"\xff\xd8\xff\xe0" + b"\x00" * 10, "image/jpeg"))],
+            data={"event_name": "T", "event_description": "T"},
+        )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["job_id"] == "http-job-999"
+    assert data["status"] == "pending"
+    assert data["backend"] == "apscheduler"
 
 
 # ── Job status ────────────────────────────────────────────────────────────────
@@ -321,21 +346,27 @@ def test_job_status_apscheduler_completed(client: TestClient):
     assert response.json()["status"] == "completed"
 
 
-def test_job_status_celery_progress(client: TestClient):
-    """Celery PROGRESS state should be returned correctly."""
-    with patch("api.scheduler.get_job", return_value=None), \
+def test_job_status_apscheduler_running_with_progress(client: TestClient):
+    """A running APScheduler job returns its in-memory progress (never falls back to Celery/Redis)."""
+    with patch("api.scheduler.get_job") as mock_get, \
          patch("celery.result.AsyncResult") as mock_result_cls:
 
-        mock_result = Mock()
-        mock_result.state = "PROGRESS"
-        mock_result.info  = {"step": "ml_selection", "pct": 50}
-        mock_result_cls.return_value = mock_result
+        # Celery is deliberately NOT consulted for status in APScheduler mode.
+        mock_result_cls.side_effect = AssertionError("Celery must not be queried for status")
 
-        response = client.get("/api/jobs/celery-job-456/status")
+        mock_get.return_value = {
+            "status":   "running",
+            "progress": {"step": "ml_selection", "pct": 50},
+            "error":    None,
+        }
+        response = client.get("/api/jobs/apscheduler-job-789/status")
 
     assert response.status_code == 200
     data = response.json()
-    assert data["backend"] == "celery"
+    assert data["status"] == "running"
+    assert data["backend"] == "apscheduler"
+    assert data["progress"]["step"] == "ml_selection"
+    assert data["progress"]["pct"] == 50
 
 
 def test_job_status_not_found(client: TestClient):
@@ -351,26 +382,56 @@ def test_job_status_not_found(client: TestClient):
 
 # ── Job result ────────────────────────────────────────────────────────────────
 
-def test_job_result_apscheduler_completed(client: TestClient):
-    """Completed APScheduler job should return its result."""
+def test_job_result_apscheduler_completed_returns_result(client: TestClient, tmp_path):
+    """Completed APScheduler job with real output files returns its result."""
+    out = tmp_path / "output" / "Test_Event"
+    out.mkdir(parents=True)
+    (out / "linkedin_collage.jpg").write_bytes(b"fake-image")
+
+    expected_result = {
+        "status":    "completed",
+        "event":     "Test Event",
+        "output_dir": str(tmp_path / "output"),
+        "files":     {"linkedin_collage.jpg": "/output/Test_Event/linkedin_collage.jpg"},
+    }
+    with patch("api.scheduler.get_job") as mock_get, \
+         patch.object(settings, "output_dir", tmp_path / "output"):
+        mock_get.return_value = {"status": "completed", "result": expected_result}
+        response = client.get("/api/jobs/test-job-123/result")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["event"] == "Test Event"
+    assert "linkedin_collage.jpg" in data["files"]
+
+
+def test_job_result_completed_but_missing_output(client: TestClient):
+    """Completed job with missing output files returns 500, not a fake success."""
     expected_result = {
         "status": "completed",
         "event":  "Test Event",
         "files":  {"linkedin_collage.jpg": "/output/Test_Event/linkedin_collage.jpg"},
     }
     with patch("api.scheduler.get_job") as mock_get:
-        mock_get.return_value = {
-            "status": "completed",
-            "result": expected_result,
-        }
+        mock_get.return_value = {"status": "completed", "result": expected_result}
         response = client.get("/api/jobs/test-job-123/result")
 
-    assert response.status_code == 200
-    assert response.json()["event"] == "Test Event"
+    assert response.status_code == 500
+    assert "missing" in response.json()["detail"].lower()
 
 
-def test_job_result_not_complete_returns_status(client: TestClient):
-    """Pending job result request should return current status, not 404."""
+def test_job_result_unknown_job_returns_404(client: TestClient):
+    """Unknown job should return 404."""
+    with patch("api.scheduler.get_job", return_value=None), \
+         patch("celery.result.AsyncResult") as mock_result_cls:
+        mock_result_cls.side_effect = Exception("Job not found")
+        response = client.get("/api/jobs/does-not-exist/result")
+
+    assert response.status_code == 404
+
+
+def test_job_result_not_complete_returns_409(client: TestClient):
+    """Pending job result request should return 409 so the client keeps polling."""
     with patch("api.scheduler.get_job") as mock_get:
         mock_get.return_value = {
             "status":   "running",
@@ -378,9 +439,10 @@ def test_job_result_not_complete_returns_status(client: TestClient):
         }
         response = client.get("/api/jobs/running-job/result")
 
-    assert response.status_code == 200
-    data = response.json()
+    assert response.status_code == 409
+    data = response.json()["detail"]
     assert data["status"] == "running"
+    assert data["message"] == "Job not yet complete"
 
 
 def test_job_result_failed_returns_500(client: TestClient):

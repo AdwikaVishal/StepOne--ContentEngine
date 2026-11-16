@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { BrandProfile } from './lib/brandProfile'
 
 export const api = axios.create({ baseURL: '', timeout: 300_000 })
 
@@ -11,6 +12,35 @@ export interface FaceResult      { filename:string; file_url:string; face_count:
 export interface ContentResult   { filename:string; file_url:string; scene_concepts:string[]; relevance_scores:Record<string,number>; concept_match_score:number }
 export interface HighlightResult { filename:string; file_url:string; highlights:HighlightClip[]; total_selected_seconds:number }
 
+// ── Crop intelligence ────────────────────────────────────────────────────────
+export interface CropBox   { x1:number; y1:number; x2:number; y2:number }   // normalised 0-1
+export interface CropMeta  {
+  image_path: string
+  target_w: number; target_h: number; target_ratio: number
+  source_w: number; source_h: number
+  crop_box: number[]; crop_box_norm: number[]
+  crop_w: number; crop_h: number
+  composition_score: number
+  breakdown: Record<string,number>
+  scene_type: string
+  subjects_preserved: string[]
+  faces_preserved: number; faces_total: number
+  warnings: string[]; trade_off: string|null; manual_override: boolean
+}
+export interface CropAnalysis {
+  width:number; height:number; orientation:string; face_count:number
+  faces:Array<{label:string;bbox:number[];bbox_px:number[];confidence:number}>
+  people:Array<{label:string;bbox:number[];bbox_px:number[];confidence:number}>
+  objects:Array<{label:string;bbox:number[];bbox_px:number[];confidence:number}>
+  salient_regions:number[][]
+  main_subject:number[]|null; secondary_subjects:number[][]
+  focal_point:number[]; focal_region:number[]
+  scene_type:string; scene_type_confidence:number; confidence:number
+  models_used:string[]
+}
+export interface CropAnalyzeResult { filename:string; file_url:string; analysis:CropAnalysis }
+export interface CropComputeResult { filename:string; file_url:string; crop_url:string; crop:CropMeta }
+
 export interface Selection {
   filename:string; file_url:string
   intended_use:'collage'|'reel'|'story'|'case_study'
@@ -20,8 +50,26 @@ export interface Selection {
   asset_type:'image'|'video'; duration:number; highlight_clips:HighlightClip[]
 }
 export interface PipelineResult { event:string; total:number; selections:Selection[] }
-export interface GenerateResult { event:string; output_dir:string; files:Record<string,string> }
+export interface GenerateResult {
+  event: string
+  output_dir: string
+  files: Record<string, string>
+  captions: Record<string, string>
+  layouts?: string[]
+  status?: string
+}
 export interface JobStatus      { job_id:string; status:string; progress?:{step?:string;pct?:number}; backend?:string; error?:string|null }
+
+// Per-request timeout policies (ms). One global timeout is the wrong tool:
+// health/status polls must fail fast, uploads may need minutes, and result
+// retrieval is bounded by output size. Each call overrides the instance default.
+export const TIMEOUT = {
+  health:    15_000,   // health / model status
+  submit:    120_000,  // multipart upload + validation (may be large)
+  status:    15_000,   // job status polling
+  result:    60_000,   // job result retrieval (text + file listing)
+  ai_op:     60_000,   // individual synchronous ML operations
+} as const
 
 const fd = (files: File[], extra: Record<string,string> = {}) => {
   const f = new FormData()
@@ -40,15 +88,15 @@ export interface GenerateFastOptions {
   generateReel?: boolean
 }
 
-export const checkHealth      = ()                                       => api.get<{status:string;version:string}>('/health').then(r=>r.data)
-export const getModelStatus   = ()                                       => api.get<Record<string,string>>('/api/model-status').then(r=>r.data)
-export const assessQuality    = (file:File)                              => { const f=new FormData(); f.append('file',file); return api.post<QualityResult>('/api/quality',f).then(r=>r.data) }
-export const detectFaces      = (file:File)                              => { const f=new FormData(); f.append('file',file); return api.post<FaceResult>('/api/faces',f).then(r=>r.data) }
-export const analyseContent   = (file:File)                              => { const f=new FormData(); f.append('file',file); return api.post<ContentResult>('/api/content',f).then(r=>r.data) }
-export const extractHighlights= (file:File, dur=45)                     => { const f=new FormData(); f.append('file',file); return api.post<HighlightResult>(`/api/highlights?target_duration=${dur}`,f).then(r=>r.data) }
-export const runPipeline      = (files:File[], desc:string)              => api.post<PipelineResult>('/api/pipeline', fd(files,{event_description:desc})).then(r=>r.data)
-export const runPipelineAsync = (files:File[], desc:string)              => api.post<{job_id:string;status:string;backend:string}>('/api/pipeline/async', fd(files,{event_description:desc})).then(r=>r.data)
-export const generateAsync    = (files:File[], name:string, desc:string) => api.post<{job_id:string;status:string;backend:string}>('/api/generate/async', fd(files,{event_name:name,event_description:desc})).then(r=>r.data)
+export const checkHealth      = ()                                       => api.get<{status:string;version:string}>('/health', { timeout: TIMEOUT.health }).then(r=>r.data)
+export const getModelStatus   = ()                                       => api.get<Record<string,string>>('/api/model-status', { timeout: TIMEOUT.health }).then(r=>r.data)
+export const assessQuality    = (file:File)                              => { const f=new FormData(); f.append('file',file); return api.post<QualityResult>('/api/quality',f,{ timeout: TIMEOUT.ai_op }).then(r=>r.data) }
+export const detectFaces      = (file:File)                              => { const f=new FormData(); f.append('file',file); return api.post<FaceResult>('/api/faces',f,{ timeout: TIMEOUT.ai_op }).then(r=>r.data) }
+export const analyseContent   = (file:File)                              => { const f=new FormData(); f.append('file',file); return api.post<ContentResult>('/api/content',f,{ timeout: TIMEOUT.ai_op }).then(r=>r.data) }
+export const extractHighlights= (file:File, dur=45)                     => { const f=new FormData(); f.append('file',file); return api.post<HighlightResult>(`/api/highlights?target_duration=${dur}`,f,{ timeout: TIMEOUT.ai_op }).then(r=>r.data) }
+export const runPipeline      = (files:File[], desc:string)              => api.post<PipelineResult>('/api/pipeline', fd(files,{event_description:desc}), { timeout: TIMEOUT.submit }).then(r=>r.data)
+export const runPipelineAsync = (files:File[], desc:string)              => api.post<{job_id:string;status:string;backend:string}>('/api/pipeline/async', fd(files,{event_description:desc}), { timeout: TIMEOUT.submit }).then(r=>r.data)
+export const generateAsync    = (files:File[], name:string, desc:string) => api.post<{job_id:string;status:string;backend:string}>('/api/generate/async', fd(files,{event_name:name,event_description:desc}), { timeout: TIMEOUT.submit }).then(r=>r.data)
 export const generateFast     = (files:File[], opts:GenerateFastOptions) => {
   const f = fd(files, {
     event_name: opts.eventName,
@@ -69,8 +117,8 @@ export const generateFast     = (files:File[], opts:GenerateFastOptions) => {
   f.append('render_brand_ids', JSON.stringify(renderBrandIds))
   return api.post<{job_id:string;status:string;backend:string}>('/api/generate/fast', f).then(r=>r.data)
 }
-export const getJobStatus     = (id:string)                              => api.get<JobStatus>(`/api/jobs/${id}/status`).then(r=>r.data)
-export const getJobResult     = (id:string)                              => api.get<any>(`/api/jobs/${id}/result`).then(r=>r.data)
+export const getJobStatus     = (id:string, config?:any)                 => api.get<JobStatus>(`/api/jobs/${id}/status`, { timeout: TIMEOUT.status, ...config }).then(r=>r.data)
+export const getJobResult     = (id:string)                              => api.get<GenerateResult>(`/api/jobs/${id}/result`, { timeout: TIMEOUT.result }).then(r=>r.data)
 
 export interface RegenerateOptions {
   eventName: string
@@ -80,13 +128,34 @@ export interface RegenerateOptions {
   faceCount?: number
 }
 export interface RegenerateResult {
-  backend: 'groq' | 'template' | 'local_llm'
+  backend: 'torch_local' | 'local_llm' | 'template'
   event: string
+  provider?: string
+  model?: string
+  model_path?: string
+  local_only?: boolean
+  remote_inference_disabled?: boolean
+  provider_status?: any
   linkedin?: string
   instagram?: string
   reel?: string
   stories?: string[]
 }
+
+export interface LLMStatus {
+  provider: string
+  model: string
+  model_path: string
+  local_only: boolean
+  remote_inference_disabled: boolean
+  device: string | null
+  loaded: boolean
+  offline_enforcement: Record<string, string | null>
+  last_load_error: string | null
+}
+
+export const getLLMStatus = () =>
+  api.get<LLMStatus>('/api/llm/status', { timeout: TIMEOUT.health }).then(r => r.data)
 
 export interface BrandClusterPoint {
   path: string
@@ -341,9 +410,292 @@ export const updateBrandProfile = (id: string, data: any) => api.put<any>(`/api/
 export const deleteBrandProfile = (id: string) => api.delete<any>(`/api/studio/brand-profiles/${id}`).then(r => r.data)
 export const duplicateBrandProfile = (id: string, name?: string) => api.post<any>(`/api/studio/brand-profiles/${id}/duplicate`, { name }).then(r => r.data)
 export const setProjectBrandProfile = (projectId: string, brandProfileId: string | null) => api.post<any>(`/api/studio/projects/${projectId}/brand-profile`, { brand_profile_id: brandProfileId }).then(r => r.data)
-export const uploadBrandAsset = (profileId: string, file: File, assetKind: 'logo' | 'reference') => {
+export const previewBrandVoice = (data: any) => api.post<any>('/api/studio/brand-profiles/voice-preview', data, { timeout: 240_000 }).then(r => r.data)
+export const uploadBrandAsset = (
+  profileId: string,
+  file: File,
+  assetKind: 'logo' | 'reference',
+  category?: string,
+  notes?: string,
+) => {
   const form = new FormData()
   form.append('file', file)
   form.append('asset_kind', assetKind)
+  if (category) form.append('category', category)
+  if (notes) form.append('notes', notes)
   return api.post<any>(`/api/studio/brand-profiles/${profileId}/assets`, form).then(r => r.data)
 }
+
+// ── Brand Intelligence Studio API ─────────────────────────────────────────────
+export interface BrandAssetEntry {
+  asset_id: string
+  kind: 'logo' | 'reference'
+  category: string
+  stored_name: string
+  original_name: string
+  sha256: string
+  bytes: number
+  width: number | null
+  height: number | null
+  format: string | null
+  uploaded_at: string
+  notes: string
+}
+
+export interface BrandAssetWarning {
+  code: string
+  severity: 'error' | 'warning' | 'info'
+  message: string
+}
+
+export interface ReferenceQualityReport {
+  profile_id: string
+  brand_name: string
+  counts: { logos: number; references: number; total: number }
+  categories: Record<string, number>
+  diversity: {
+    score: number
+    pairs: number
+    near_duplicate_pairs: string[][]
+  } | null
+  assets: {
+    asset_id: string
+    kind: string
+    category: string
+    width: number | null
+    height: number | null
+    sharpness: number | null
+    near_duplicate_of: string | null
+    status: string
+  }[]
+  warnings: BrandAssetWarning[]
+  readiness: number
+}
+
+export const listBrandAssets = (profileId: string) =>
+  api.get<{ assets: BrandAssetEntry[] }>(`/api/brand-intel/brands/${profileId}/assets`).then(r => r.data)
+
+export const updateBrandAsset = (profileId: string, assetId: string, data: { category?: string; notes?: string }) =>
+  api.patch<{ asset: BrandAssetEntry }>(`/api/brand-intel/brands/${profileId}/assets/${assetId}`, data).then(r => r.data)
+
+export const deleteBrandAsset = (profileId: string, assetId: string) =>
+  api.delete<{ status: string; asset: BrandAssetEntry; profile: BrandProfile }>(`/api/brand-intel/brands/${profileId}/assets/${assetId}`).then(r => r.data)
+
+export const replaceBrandAsset = (profileId: string, assetId: string, file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post<{ asset: BrandAssetEntry; profile: BrandProfile }>(`/api/brand-intel/brands/${profileId}/assets/${assetId}/replace`, form).then(r => r.data)
+}
+
+export const getReferenceQuality = (profileId: string) =>
+  api.get<ReferenceQualityReport>(`/api/brand-intel/brands/${profileId}/reference-quality`).then(r => r.data)
+
+// ── Crop intelligence API ────────────────────────────────────────────────────
+export const cropAnalyze = (file: File) => {
+  const f = new FormData(); f.append('file', file)
+  return api.post<CropAnalyzeResult>('/api/crop/analyze', f, { timeout: TIMEOUT.ai_op }).then(r => r.data)
+}
+
+export const cropCompute = (
+  file: File,
+  target_w: number,
+  target_h: number,
+  focal_x?: number | null,
+  focal_y?: number | null,
+) => {
+  const f = new FormData()
+  f.append('file', file)
+  f.append('target_w', String(target_w))
+  f.append('target_h', String(target_h))
+  if (focal_x != null) f.append('focal_x', String(focal_x))
+  if (focal_y != null) f.append('focal_y', String(focal_y))
+  return api.post<CropComputeResult>('/api/crop/compute', f, { timeout: TIMEOUT.ai_op }).then(r => r.data)
+}
+
+export const cropInspect = (image_path: string, target_w: number, target_h: number) =>
+  api.get<{ crop: CropMeta }>('/api/crop/inspect', {
+    params: { image_path, target_w, target_h },
+    timeout: TIMEOUT.ai_op,
+  }).then(r => r.data)
+
+export const cropComputeFromPath = (
+  image_path: string,
+  target_w: number,
+  target_h: number,
+  focal_x?: number | null,
+  focal_y?: number | null,
+) =>
+  api.post<CropComputeResult>('/api/crop/compute-from-path', {
+    image_path,
+    target_w,
+    target_h,
+    focal_x,
+    focal_y,
+  }, { timeout: TIMEOUT.ai_op }).then(r => r.data)
+
+export interface CropOverride {
+  focal_point: [number, number]
+  crop_box_norm: [number, number, number, number]
+}
+export const cropSaveOverride = (
+  image_path: string,
+  format_key: string,
+  focal_point: [number, number],
+  crop_box_norm?: [number, number, number, number],
+) =>
+  api.post<{ status: string; image_path: string; format_key: string }>(
+    '/api/crop/save-override',
+    { image_path, format_key, focal_point, crop_box_norm },
+    { timeout: TIMEOUT.ai_op },
+  ).then(r => r.data)
+
+export const cropGetOverride = (image_path: string, format_key: string) =>
+  api.get<{ override: CropOverride | null }>('/api/crop/override', {
+    params: { image_path, format_key },
+    timeout: TIMEOUT.ai_op,
+  }).then(r => r.data)
+
+
+// ── Brand Intelligence — Datasets (Phase 2) ──────────────────────────────────
+
+export type DatasetStatus = 'ingesting' | 'ready' | 'running' | 'classified'
+
+export interface DatasetSummary {
+  id: string
+  name: string
+  description: string
+  created_at: string
+  updated_at: string
+  status: DatasetStatus
+  source: { kind: string; original_name?: string }
+  image_count: number
+  duplicate_count: number
+  shared_count: number
+  rejected_count: number
+  rejected_reasons: Record<string, number>
+  bytes_total: number
+  pending_uploads?: number
+  finalized_at?: string
+}
+
+export interface UploadResultItem {
+  filename: string
+  status: 'accepted' | 'duplicate' | 'rejected'
+  reason?: string
+  detail?: string
+  sha256?: string
+  shared?: boolean
+  stored_path?: string
+  width?: number
+  height?: number
+  format?: string
+  bytes?: number
+}
+
+export interface IngestOutcome {
+  results: UploadResultItem[]
+  stats: { accepted: number; duplicate: number; rejected: number; shared: number }
+  manifest: DatasetSummary
+  skipped?: { name: string; reason: string; detail?: string }[]
+  upload_id?: string
+  filename?: string
+}
+
+export interface UploadSession {
+  upload_id: string
+  filename: string
+  total_bytes: number
+  chunk_size: number
+  total_chunks: number
+  status: 'pending' | 'complete'
+  created_at: string
+  received_chunks: number[]
+  missing_chunks: number[]
+}
+
+export interface DatasetImage {
+  image_id: string
+  stored_path: string
+  original_filename: string
+  sha256: string
+  bytes: number
+  width: number
+  height: number
+  format: string
+  uploaded_at: string
+  duplicate_of: string | null
+}
+
+export const createDataset = (data: { name: string; description?: string }) =>
+  api.post<DatasetSummary>('/api/brand-intel/datasets', data).then(r => r.data)
+
+export const listDatasets = () =>
+  api.get<{ datasets: DatasetSummary[] }>('/api/brand-intel/datasets').then(r => r.data)
+
+export const getDataset = (id: string) =>
+  api.get<DatasetSummary>(`/api/brand-intel/datasets/${id}`).then(r => r.data)
+
+export const deleteDataset = (id: string, confirm: string) =>
+  api.delete<{ status: string; note?: string }>(
+    `/api/brand-intel/datasets/${id}`, { params: { confirm } },
+  ).then(r => r.data)
+
+export const uploadDatasetFiles = (id: string, files: File[]) => {
+  const form = new FormData()
+  files.forEach(f => form.append('files', f))
+  return api.post<IngestOutcome>(
+    `/api/brand-intel/datasets/${id}/upload`, form,
+  ).then(r => r.data)
+}
+
+export const uploadDatasetZip = (id: string, file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  return api.post<IngestOutcome>(
+    `/api/brand-intel/datasets/${id}/upload-zip`, form,
+  ).then(r => r.data)
+}
+
+export const createUploadSession = (
+  id: string,
+  body: { filename: string; total_bytes: number; total_chunks: number; upload_id?: string },
+) =>
+  api.post<UploadSession>(
+    `/api/brand-intel/datasets/${id}/uploads`, body,
+  ).then(r => r.data)
+
+export const listUploadSessions = (id: string) =>
+  api.get<{ uploads: UploadSession[] }>(
+    `/api/brand-intel/datasets/${id}/uploads`,
+  ).then(r => r.data)
+
+export const sendUploadChunk = (
+  id: string, uploadId: string, index: number, chunk: Blob,
+) => {
+  const form = new FormData()
+  form.append('file', chunk, `chunk_${index}`)
+  return api.post<{ duplicate: boolean; already_complete?: boolean; session: UploadSession }>(
+    `/api/brand-intel/datasets/${id}/uploads/${uploadId}/chunks/${index}`, form,
+  ).then(r => r.data)
+}
+
+export const completeUpload = (id: string, uploadId: string) =>
+  api.post<IngestOutcome>(
+    `/api/brand-intel/datasets/${id}/uploads/${uploadId}/complete`,
+  ).then(r => r.data)
+
+export const discardUpload = (id: string, uploadId: string) =>
+  api.delete<{ status: string }>(
+    `/api/brand-intel/datasets/${id}/uploads/${uploadId}`,
+  ).then(r => r.data)
+
+export const finalizeDataset = (id: string) =>
+  api.post<DatasetSummary>(
+    `/api/brand-intel/datasets/${id}/finalize`,
+  ).then(r => r.data)
+
+export const listDatasetImages = (id: string, offset = 0, limit = 50, q = '') =>
+  api.get<{ total: number; offset: number; limit: number; images: DatasetImage[] }>(
+    `/api/brand-intel/datasets/${id}/images`,
+    { params: { offset, limit, q } },
+  ).then(r => r.data)

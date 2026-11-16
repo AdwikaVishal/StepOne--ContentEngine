@@ -1,0 +1,10 @@
+# Windows-specific dependency entry point.
+# Install PyTorch with CUDA first (choose the wheel that matches your driver):
+#   .venv\Scripts\python.exe -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cu124
+# Then install everything else:
+#   .venv\Scripts\python.exe -m pip install -r requirements-windows.txt
+#
+# `python-magic-bin` is pulled in automatically via the platform marker in
+# requirements.txt; it bundles libmagic.dll so no separate libmagic install is
+# needed on Windows.
+-r requirements.txt

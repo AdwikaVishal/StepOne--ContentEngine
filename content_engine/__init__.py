@@ -26,6 +26,8 @@ def __getattr__(name):
         "CopyGenerator":      (".copy_generator",             "CopyGenerator"),
         "generate_case_study":(".case_study_generator",       "generate_case_study"),
         "ContentOrchestrator":(".orchestrator",               "ContentOrchestrator"),
+        "FocalAnalyzer":      (".composition.focal_analyzer", "FocalAnalyzer"),
+        "SmartCropper":       (".composition.smart_crop",     "SmartCropper"),
         "BrandSegregator":    (".brand_segregator",           "BrandSegregator"),
         "AssetClassification":(".brand_segregator",           "AssetClassification"),
         "stepone_brand_voice":(".brand_voice",                "stepone_brand_voice"),
@@ -54,6 +56,9 @@ __all__ = [
     "CopyGenerator",
     "generate_case_study",
     "ContentOrchestrator",
+    # Composition engine (focal analysis + subject-aware cropping)
+    "FocalAnalyzer",
+    "SmartCropper",
     # Brand segregation (GFF 2025 challenge)
     "BrandSegregator",
     "AssetClassification",

@@ -246,8 +246,16 @@ class ContentEngine:
             return self._process_video(asset_path)
         return self._process_image(asset_path)
 
-    def process_assets_parallel(self, asset_paths: List[str], max_workers: int = 8) -> List[AssetMetadata]:
-        """Process assets in parallel using ThreadPoolExecutor for 3-4x speedup."""
+    def process_assets_parallel(self, asset_paths: List[str], max_workers: Optional[int] = None) -> List[AssetMetadata]:
+        """Process assets in parallel using ThreadPoolExecutor.
+
+        Concurrency is bounded to protect the RTX 4050's 6 GB VRAM: models are
+        shared across workers, so only a small number of concurrent GPU inference
+        streams is needed. Defaults to ``settings.pipeline_max_workers``
+        (``CE_PIPELINE_MAX_WORKERS`` env var, default 2).
+        """
+        if max_workers is None:
+            max_workers = _cfg.pipeline_max_workers
         results = []
         total = len(asset_paths)
 

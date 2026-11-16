@@ -27,9 +27,12 @@ Brand voice integration:
 import json
 import os
 import re
+import time
 import warnings
 from dataclasses import dataclass, field
 from typing import List, Optional, Dict
+
+from config import QWEN_MODEL_PATH
 
 from content_engine.ai_mode import is_cloud_testing
 from content_engine.data_types import AssetMetadata
@@ -487,11 +490,12 @@ class CopyGenerator:
         max_new_tokens: int,
         correction: str = "",
         system_prompt: Optional[str] = None,
+        operation: str = "caption",
     ) -> str:
-        """Generate text using the mode-appropriate LLM provider.
+        """Generate text using the local Qwen provider.
 
-        Routes through MLX (local) or Groq (cloud_testing) based on
-        AI_EXECUTION_MODE. No silent fallback between modes.
+        Routes exclusively through TorchLocalProvider (Qwen2.5-1.5B-Instruct,
+        models/qwen/). No cloud fallback, no template substitution on failure.
         """
         if correction:
             prompt = f"{prompt}\n\nRetry constraint: {correction}"
@@ -501,8 +505,10 @@ class CopyGenerator:
             "Use only supplied facts. Never emit instructions, analysis, or placeholders."
         )
 
+        provider = self._provider
+        t0 = time.perf_counter()
         try:
-            output = self._provider.generate(
+            output = provider.generate(
                 system=system,
                 user=prompt,
                 max_tokens=max_new_tokens,
@@ -510,10 +516,33 @@ class CopyGenerator:
             )
             if not output:
                 raise RuntimeError("Provider returned empty output")
+            duration = time.perf_counter() - t0
+            _log.info(
+                "llm_generation_ok",
+                provider=provider.name,
+                model="Qwen2.5-1.5B-Instruct",
+                model_path=str(QWEN_MODEL_PATH),
+                device=getattr(provider, "device", "cpu"),
+                operation=operation,
+                duration_s=round(duration, 4),
+                max_tokens=max_new_tokens,
+                success=True,
+            )
             return output
         except Exception as e:
-            _log.warning("provider_generation_failed", error=str(e), provider=self._provider.name)
-            raise RuntimeError(f"LLM generation failed ({self._provider.name}): {e}") from e
+            duration = time.perf_counter() - t0
+            _log.error(
+                "llm_generation_failed",
+                provider=provider.name,
+                model="Qwen2.5-1.5B-Instruct",
+                model_path=str(QWEN_MODEL_PATH),
+                device=getattr(provider, "device", "cpu"),
+                operation=operation,
+                duration_s=round(duration, 4),
+                success=False,
+                error=str(e),
+            )
+            raise RuntimeError(f"LLM generation failed ({provider.name}): {e}") from e
 
     @property
     def backend(self) -> str:
@@ -559,17 +588,18 @@ Follow this brand voice: Clear over clever. Active over passive. Specific over v
 
 Return ONLY valid JSON with no markdown formatting, no code blocks, no explanation:"""
 
-            raw = self._generate(prompt, max_new_tokens=800)
+            raw = self._generate(prompt, max_new_tokens=800, operation="batch")
             cleaned = raw.strip()
             if cleaned.startswith("```"):
                 cleaned = cleaned.split("\n", 1)[-1]
                 cleaned = cleaned.rsplit("```", 1)[0]
             result = json.loads(cleaned)
-            if not isinstance(result.get("stories"), list):
-                result["stories"] = _story_captions_template(ctx.event_name, num_story_frames)
-            while len(result["stories"]) < num_story_frames:
-                result["stories"].append(_story_captions_template(ctx.event_name, 1)[0])
-            result["stories"] = result["stories"][:num_story_frames]
+            stories = result.get("stories")
+            if not isinstance(stories, list) or len(stories) < num_story_frames:
+                # Never fabricate/pad with template captions — surface the
+                # shortfall to the caller so it can decide how to respond.
+                return None
+            result["stories"] = [str(s) for s in stories[:num_story_frames]]
             _log.info("batch_captions_done", platforms=", ".join(result.keys()))
             return result
         except Exception as e:
@@ -594,9 +624,12 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         )
         prompt += " No hashtags unless the brand guidance asks for them."
         try:
-            return self._generate(prompt, max_new_tokens=72, correction=correction, system_prompt=system_prompt)
+            return self._generate(
+                prompt, max_new_tokens=72, correction=correction, system_prompt=system_prompt,
+                operation="linkedin",
+            )
         except Exception as e:
-            raise RuntimeError(f"MLX inference failed: {e}")
+            raise RuntimeError(f"LLM inference failed: {e}")
 
     # ── Instagram carousel ────────────────────────────────────────────────────
 
@@ -616,9 +649,12 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         )
         prompt += " No hashtags unless the brand guidance asks for them."
         try:
-            return self._generate(prompt, max_new_tokens=40, correction=correction, system_prompt=system_prompt)
+            return self._generate(
+                prompt, max_new_tokens=40, correction=correction, system_prompt=system_prompt,
+                operation="instagram",
+            )
         except Exception as e:
-            raise RuntimeError(f"MLX inference failed: {e}")
+            raise RuntimeError(f"LLM inference failed: {e}")
 
     # ── Instagram reel ────────────────────────────────────────────────────────
 
@@ -636,9 +672,9 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
             f"Energetic and punchy, ends with a tag CTA. Include 1-2 hashtags. Grounded in content."
         )
         try:
-            return self._generate(prompt, max_new_tokens=80)
+            return self._generate(prompt, max_new_tokens=80, operation="reel")
         except Exception as e:
-            raise RuntimeError(f"MLX inference failed: {e}")
+            raise RuntimeError(f"LLM inference failed: {e}")
 
     # ── Instagram stories ─────────────────────────────────────────────────────
 
@@ -658,12 +694,31 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
         )
         try:
             result = self._generate(prompt, max_new_tokens=max(32, num_slides * 32))
-            captions = [caption.strip() for caption in result.split("|") if caption.strip()]
+
+            # Parse real model output robustly. Local LLMs may not honor the
+            # "|" separator instruction, so accept newline-separated (optionally
+            # numbered) captions as well. This never fabricates captions — it
+            # only splits the actual generated text; a template pad is applied
+            # only when the model genuinely returns fewer than requested.
+            raw_parts = [part.strip() for part in result.split("|") if part.strip()]
+            if len(raw_parts) < num_slides:
+                lines = [ln.strip() for ln in result.splitlines() if ln.strip()]
+                numbered = []
+                for ln in lines:
+                    cleaned = re.sub(r"^\d+[\.\)]\s*", "", ln).strip()
+                    if cleaned:
+                        numbered.append(cleaned)
+                if len(numbered) >= len(raw_parts):
+                    raw_parts = numbered
+
+            captions = raw_parts[:num_slides]
             if len(captions) != num_slides:
-                raise RuntimeError(f"MLX returned {len(captions)} Stories captions; expected {num_slides}")
-            return captions[:num_slides]
+                raise RuntimeError(
+                    f"Qwen returned {len(captions)} Stories captions; expected {num_slides}"
+                )
+            return captions
         except Exception as e:
-            raise RuntimeError(f"MLX Stories generation failed: {e}") from e
+            raise RuntimeError(f"LLM Stories generation failed: {e}") from e
 
     # ── A/B variants ──────────────────────────────────────────────────────────
 
@@ -761,7 +816,7 @@ REQUIREMENTS:
 
 Write the caption:"""
 
-            result = self._generate(prompt, max_new_tokens=180)
+            result = self._generate(prompt, max_new_tokens=180, operation="brand-carousel")
             _log.info("brand_carousel_caption_done", brand=brand_name, chars=len(result))
 
             # Validate against brand voice
@@ -771,7 +826,7 @@ Write the caption:"""
 
             return result
         except Exception as e:
-            raise RuntimeError(f"MLX brand carousel generation failed: {e}") from e
+            raise RuntimeError(f"LLM brand carousel generation failed: {e}") from e
 
     def generate_brand_reel_caption(
         self,
@@ -811,11 +866,11 @@ REQUIREMENTS:
 
 Write the caption:"""
 
-            result = self._generate(prompt, max_new_tokens=120)
+            result = self._generate(prompt, max_new_tokens=120, operation="brand-reel")
             _log.info("brand_reel_caption_done", brand=brand_name, chars=len(result))
             return result
         except Exception as e:
-            raise RuntimeError(f"MLX brand Reel generation failed: {e}") from e
+            raise RuntimeError(f"LLM brand Reel generation failed: {e}") from e
 
     def generate_brand_story_captions(
         self,
@@ -858,17 +913,17 @@ REQUIREMENTS:
 
 Write the story captions (format: frame1 | frame2 | frame3 | frame4):"""
 
-            result = self._generate(prompt, max_new_tokens=200)
+            result = self._generate(prompt, max_new_tokens=200, operation="brand-stories")
 
             # Split by | delimiter
             captions = [c.strip() for c in result.split("|")][:num_slides]
             if len(captions) < num_slides:
-                raise RuntimeError(f"MLX returned {len(captions)} Stories captions; expected {num_slides}")
+                raise RuntimeError(f"Qwen returned {len(captions)} Stories captions; expected {num_slides}")
 
             _log.info("brand_story_captions_done", brand=brand_name, frames=len(captions))
             return captions
         except Exception as e:
-            raise RuntimeError(f"MLX brand Stories generation failed: {e}") from e
+            raise RuntimeError(f"LLM brand Stories generation failed: {e}") from e
 
 
 # ── Brand-aware templates ─────────────────────────────────────────────────────

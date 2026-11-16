@@ -3,20 +3,50 @@ import { getJobStatus } from '../api'
 import type { JobStatus } from '../api'
 
 /**
- * Polls /api/jobs/{jobId}/status every 2 seconds until terminal state.
+ * useJobPolling — centralized, reliable job-status polling.
  *
- * Callbacks are stored in refs to prevent dependency array churn
- * (avoids ERR_INSUFFICIENT_RESOURCES from restarting interval on every render).
+ * Polls /api/jobs/{jobId}/status until the job reaches a terminal state.
+ *
+ * Design decisions (addressing the reported false "Generation failed" bug):
+ *   - A single transient status-request failure (timeout / network blip) is
+ *     NEVER treated as a job failure. It is recorded as a network error and
+ *     polling resumes on the next tick.
+ *   - Only one status request is in flight at a time; the previous request is
+ *     aborted before a new one starts, so a slow/stale response can never
+ *     overwrite newer job state.
+ *   - Terminal states are recognized explicitly:
+ *         completed / SUCCESS -> success  (call onDone)
+ *         failed / FAILURE    -> failure  (call onFail)
+ *   - Polling stops on unmount and on terminal state (AbortController + flag).
+ *   - Callbacks live in refs so the interval never restarts on every render.
  */
+
+export const TERMINAL_SUCCESS = new Set(['completed', 'SUCCESS'])
+export const TERMINAL_FAILURE = new Set(['failed', 'FAILURE', 'error'])
+
+export const POLL_INTERVAL_MS = 2500
+
 export function useJobPolling(
   jobId: string | null,
   onDone?: ((s: JobStatus) => void) | null,
   onFail?: ((e: string) => void) | null,
 ) {
   const [status, setStatus] = useState<JobStatus | null>(null)
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [networkError, setNetworkError] = useState<string | null>(null)
+  const networkErrorRef = useRef<string | null>(null)
 
-  // Store callbacks in refs — never stale, never trigger re-renders
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const requestSeqRef = useRef(0) // monotonic; only the latest response wins
+  const cancelledRef = useRef(false)
+
+  // Keep a ref to the current network error so the (long-lived) poll closure
+  // reads fresh state without restarting the polling effect.
+  useEffect(() => {
+    networkErrorRef.current = networkError
+  }, [networkError])
+
+  // Keep callbacks fresh without re-running the effect
   const onDoneRef = useRef(onDone)
   const onFailRef = useRef(onFail)
   useEffect(() => { onDoneRef.current = onDone }, [onDone])
@@ -27,65 +57,109 @@ export function useJobPolling(
       clearInterval(intervalRef.current)
       intervalRef.current = null
     }
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
   }, [])
 
-  // Restart interval only when jobId changes
-  useEffect(() => {
-    if (!jobId) {
-      stopPolling()
-      setStatus(null)
-      return
-    }
+  const isTerminal = (s: string | undefined): 'success' | 'failure' | null => {
+    if (s == null) return null
+    if (TERMINAL_SUCCESS.has(s)) return 'success'
+    if (TERMINAL_FAILURE.has(s)) return 'failure'
+    return null
+  }
 
-    let cancelled = false
-    let retries = 0
-    const MAX_RETRIES = 150 // 150 * 2s = 300s = 5 minutes
+  const abortCurrent = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
+  }, [])
+
+  // Restart polling only when jobId changes
+  useEffect(() => {
+    cancelledRef.current = false
+    stopPolling()
+    setStatus(null)
+    setNetworkError(null)
+
+    if (!jobId) return
 
     const poll = async () => {
-      if (cancelled) return
-      retries += 1
+      if (cancelledRef.current) return
 
-      if (retries > MAX_RETRIES) {
-        stopPolling()
-        onFailRef.current?.('Job timed out. Please try again.')
-        return
-      }
+      // Abort any still-in-flight request so we never issue overlapping polls.
+      abortCurrent()
+      const controller = new AbortController()
+      abortRef.current = controller
+      const seq = ++requestSeqRef.current
 
       try {
-        const s = await getJobStatus(jobId)
-        if (cancelled) return
+        const s = await getJobStatus(jobId, { signal: controller.signal })
+        abortRef.current = null
+
+        // A stale response must not overwrite newer job state.
+        if (cancelledRef.current || seq !== requestSeqRef.current) return
+
+        // A successful poll clears any previously shown network error.
+        if (networkErrorRef.current) {
+          networkErrorRef.current = null
+          setNetworkError(null)
+        }
         setStatus(s)
 
-        if (['completed', 'SUCCESS'].includes(s.status)) {
+        const terminal = isTerminal(s.status)
+        if (terminal === 'success') {
           stopPolling()
           onDoneRef.current?.(s)
-        } else if (['failed', 'FAILURE'].includes(s.status)) {
+        } else if (terminal === 'failure') {
           stopPolling()
           onFailRef.current?.(s.error ?? 'Job failed')
         }
-      } catch (err) {
-        // Surface network errors meaningfully instead of silently swallowing
-        const msg = err instanceof Error ? err.message : String(err)
-        if (cancelled) return
-        stopPolling()
-        onFailRef.current?.(`Network error: ${msg}`)
+        // Otherwise keep polling.
+      } catch (rawErr) {
+        abortRef.current = null
+        if (cancelledRef.current || seq !== requestSeqRef.current) return
+
+        // Axios wraps an aborted request as CanceledError / ECONNABORTED.
+        // That is expected on unmount / job change and must not be reported.
+        const err = rawErr as { name?: string; code?: string | number; message?: string }
+        const isAborted =
+          rawErr instanceof DOMException && rawErr.name === 'AbortError' ||
+          err.name === 'CanceledError' ||
+          err.code === 'ECONNABORTED' ||
+          /canceled|aborted/i.test(String(err.message ?? ''))
+        if (isAborted) return
+
+        const msg = err.message ?? String(rawErr)
+        // Transient network failure: report it but KEEP polling. A single
+        // timed-out status request is not proof that the backend job failed.
+        networkErrorRef.current = `Connection interrupted — checking job status again (${msg}).`
+        setNetworkError(networkErrorRef.current)
       }
     }
 
     poll() // immediate first poll
-    intervalRef.current = setInterval(poll, 2000)
+    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS)
 
     return () => {
-      cancelled = true
+      cancelledRef.current = true
       stopPolling()
     }
-  }, [jobId, stopPolling])
-
+  }, [jobId, stopPolling, abortCurrent])
 
   const pct  = status?.progress?.pct  ?? _toPct(status?.status)
   const step = status?.progress?.step ?? _toStep(status?.status)
 
-  return { status, polling: !!intervalRef.current, pct, step }
+  return {
+    status,
+    pct,
+    step,
+    polling: intervalRef.current != null,
+    networkError,
+    isTerminal: status ? isTerminal(status.status) : null,
+  }
 }
 
 function _toPct(s?: string) {
@@ -98,6 +172,6 @@ function _toPct(s?: string) {
 function _toStep(s?: string) {
   if (s === 'completed' || s === 'SUCCESS') return 'done'
   if (s === 'PROGRESS' || s === 'running' || s === 'STARTED') return 'processing_assets'
-  if (s === 'failed'    || s === 'FAILURE') return 'failed'
+  if (s === 'failed'    || s === 'FAILURE' || s === 'error') return 'failed'
   return 'queued'
 }

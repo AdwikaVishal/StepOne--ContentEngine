@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { FileDown, Download, Image as ImageIcon, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react'
+import { FileDown, Download, Image as ImageIcon, AlertTriangle, TrendingUp, Sparkles, BarChart3 } from 'lucide-react'
 
 import { Card, Spinner, Btn } from './ui'
 import { toast } from './ui/Toast'
@@ -28,6 +28,7 @@ interface CaseStudyData {
   selected_assets_count: number
   avg_quality_score: number
   avg_aesthetic_score: number
+  avg_confidence_score: number
   avg_face_count: number
   category_distribution: Record<string, number>
   duplicates_removed: number
@@ -126,9 +127,10 @@ export default function CaseStudyReport({ jobId, eventName, onDownloadMarkdown }
   }
 
   const stats = [
-    { label: 'Total Assets', value: data.total_assets, icon: ImageIcon, color: '#60a5fa' },
-    { label: 'Selected', value: data.selected_assets_count, icon: TrendingUp, color: '#10b981' },
-    { label: 'Avg Quality', value: `${Math.round(data.avg_quality_score * 100)}%`, icon: Sparkles, color: '#f59e0b' },
+    { label: 'Uploaded Assets', value: data.total_assets, icon: ImageIcon, color: '#60a5fa' },
+    { label: 'ML-Selected (≥0.5 conf.)', value: data.selected_assets_count, icon: TrendingUp, color: '#10b981' },
+    { label: 'Avg Technical Quality', value: `${Math.round(data.avg_quality_score * 100)}%`, icon: Sparkles, color: '#f59e0b' },
+    { label: 'Avg Confidence (Final)', value: `${Math.round(data.avg_confidence_score * 100)}%`, icon: BarChart3, color: '#833ab4' },
     { label: 'Low Confidence', value: data.low_confidence_count, icon: AlertTriangle, color: '#ef4444' },
   ]
 
@@ -190,6 +192,33 @@ export default function CaseStudyReport({ jobId, eventName, onDownloadMarkdown }
               </div>
               <div style={{ height: 4, background: 'var(--s4)', borderRadius: 4, overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${item.pct}%`, background: 'var(--accent)', borderRadius: 4 }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Asset selection breakdown */}
+      <Card style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 11, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 10, fontWeight: 700 }}>How assets were counted</p>
+        <p style={{ fontSize: 12.5, color: 'var(--t2)', lineHeight: 1.7, marginBottom: 12 }}>
+          <strong>Uploaded assets</strong> are all files uploaded to this job.{' '}
+          <strong>ML-selected</strong> means the asset's final composite confidence scored ≥0.5 on the review threshold — an ML decision, not a manual pick.{' '}
+          <strong>Assets used in generated outputs</strong> are those chosen by the pipeline for the collage/stories/reel layouts (ranked separately from the 0.5 confidence review threshold, so they may include lower-confidence assets).{' '}
+          <strong>Manual selection</strong> is chosen by you in the Asset Selection step and is not reflected here unless a from-selection job was run.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 10 }}>
+          {[
+            { label: 'Uploaded', value: data.total_assets, color: '#60a5fa' },
+            { label: 'ML-Selected (≥0.5)', value: data.selected_assets_count, color: '#10b981' },
+            { label: 'Low Confidence (<0.5)', value: data.low_confidence_count, color: '#ef4444' },
+            { label: 'Avg Technical Quality', value: `${Math.round(data.avg_quality_score * 100)}%`, color: '#f59e0b' },
+            { label: 'Avg Confidence (Final)', value: `${Math.round(data.avg_confidence_score * 100)}%`, color: '#833ab4' },
+          ].map((item, i) => (
+            <div key={i} style={{ background: 'var(--s3)', padding: 12, borderRadius: 'var(--rs)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 12, color: 'var(--t2)', fontWeight: 600 }}>{item.label}</span>
+                <span style={{ fontSize: 13, color: item.color, fontWeight: 800 }}>{item.value}</span>
               </div>
             </div>
           ))}

@@ -30,9 +30,10 @@ from fastapi.staticfiles import StaticFiles
 import asyncio
 import uvicorn
 
-from config import settings
+from config import settings, QWEN_MODEL_PATH
 from api.logger import get_logger, request_id_var, setup_logging
 from api.utils import safe_jsonify
+from content_engine.composition.smart_crop import get_override_store
 
 
 # Initialise structured logging before any logger.* calls
@@ -72,11 +73,12 @@ app.add_middleware(
 async def startup():
     """
     On startup:
-    1. Schedule daily cleanup via APScheduler (no cron/Docker needed)
-    2. Log which job backend is active
-    3. Preload ML models in background (eliminate cold start)
+    1. Start the APScheduler exactly once (guarded against duplicate starts)
+    2. Schedule daily cleanup via APScheduler (no cron/Docker needed)
+    3. Probe Redis availability in the background (never blocks startup/requests)
+    4. Preload ML models in background (eliminate cold start)
     """
-    # Daily cleanup at 03:00 UTC
+    # Daily cleanup at 03:00 UTC (starts the scheduler exactly once)
     try:
         from api.scheduler import get_scheduler
         from cleanup import run_cleanup
@@ -85,7 +87,7 @@ async def startup():
         sched.add_job(
             lambda: run_cleanup(
                 upload_days=settings.upload_retention_days,
-                output_days=settings.output_retention_days,
+                output_days=settings.upload_retention_days,
             ),
             trigger="cron",
             hour=3, minute=0,
@@ -96,20 +98,29 @@ async def startup():
     except Exception as e:
         logger.warning("cleanup_scheduler_failed", error=str(e))
 
-    # Log active job backend
-    try:
-        import redis as redis_lib
-        r = redis_lib.from_url(settings.redis_url, socket_connect_timeout=1)
-        r.ping()
-        logger.info("job_backend", backend="celery+redis", url=settings.redis_url)
-    except Exception:
-        logger.info(
-            "job_backend",
-            backend="apscheduler_in_memory",
-            note="Redis unavailable — async jobs run in-process (dev mode)",
-        )
+    # Probe Redis availability in a background thread so neither startup nor any
+    # request ever blocks on a dead Redis connection.
+    def _probe_redis() -> None:
+        try:
+            import redis as redis_lib
+            redis_lib.from_url(settings.redis_url, socket_connect_timeout=0.3).ping()
+            _redis_available_cache["value"] = True
+        except Exception:
+            _redis_available_cache["value"] = False
+        _redis_available_cache["checked_at"] = time.time()
 
-    # Background model preloading — eliminates 15-20s cold start on first request
+    threading.Thread(target=_probe_redis, daemon=True).start()
+
+    # Log active job backend (probe populates the cache in the background).
+    logger.info(
+        "job_backend",
+        backend="apscheduler_in_memory",
+        note="Redis unavailable — async jobs run in-process (dev mode)",
+    )
+
+    # Background model preloading — eliminates 15-20s cold start on first request.
+    # All components share a single CLIP instance via the model registry, so this
+    # preloads CLIP exactly once (no duplicate weights across workers).
     def preload_models():
         logger.info("preloading_models_start")
         start = time.perf_counter()
@@ -118,6 +129,9 @@ async def startup():
             from content_engine.models.face_detection import FaceDetector
             from content_engine.models.content_understanding import ContentUnderstander
             from content_engine.models.video_processing import VideoProcessor
+            from content_engine.utils.model_registry import get_model_registry
+
+            # Touch each component's lazy models; CLIP is loaded once and shared.
             qa = QualityAssessor()
             _ = qa.clip_model
             fd = FaceDetector()
@@ -126,8 +140,15 @@ async def startup():
             _ = cu.clip
             vp = VideoProcessor()
             _ = vp.clip_model
-            elapsed = time.perf_counter() - start
-            logger.info("preloading_models_done", elapsed_seconds=round(elapsed, 2))
+
+            # Surface the shared device for diagnostics.
+            registry = get_model_registry()
+            logger.info(
+                "preloading_models_done",
+                elapsed_seconds=round(time.perf_counter() - start, 2),
+                clip_device=registry.get_clip_device(),
+                clip_loaded=registry.is_clip_loaded(),
+            )
         except Exception as e:
             logger.warning("preloading_models_failed", error=str(e))
 
@@ -161,6 +182,7 @@ _face_detector       = None
 _content_understander = None
 _video_processor     = None
 _engine              = None
+_cropper             = None
 
 
 def get_quality_assessor():
@@ -193,6 +215,14 @@ def get_video_processor():
         from content_engine.models.video_processing import VideoProcessor
         _video_processor = VideoProcessor()
     return _video_processor
+
+
+def get_cropper():
+    global _cropper
+    if _cropper is None:
+        from content_engine.composition import SmartCropper
+        _cropper = SmartCropper()
+    return _cropper
 
 
 # ── File validation ───────────────────────────────────────────────────────────
@@ -547,17 +577,24 @@ async def validate_uploads(files: List[UploadFile]) -> List[Path]:
 
 # ── Health & status ───────────────────────────────────────────────────────────
 
+# Cached Redis availability so /health never blocks on a dead Redis connection.
+# Populated once in the background at startup and re-checked every few seconds.
+_redis_available_cache = {"value": False, "checked_at": 0.0}
+
+
+def _redis_available() -> bool:
+    """Cached Redis availability (populated by the startup probe below).
+
+    The request path never performs a synchronous Redis probe, so /health never
+    blocks on a dead Redis connection.
+    """
+    return _redis_available_cache["value"]
+
+
 @app.get("/health")
 def health():
-    """Health check — also reports Redis/Celery availability."""
-    redis_ok = False
-    try:
-        import redis as redis_lib
-        redis_lib.from_url(settings.redis_url, socket_connect_timeout=1).ping()
-        redis_ok = True
-    except Exception:
-        pass
-
+    """Health check — never waits on Redis, GPU inference, or model loading."""
+    redis_ok = _redis_available()
     return {
         "status":  "ok",
         "version": "2.0.0",
@@ -578,10 +615,24 @@ def model_status():
         except ImportError:
             status[pkg] = "not installed"
 
-    # Check Groq key configured
+    # Groq is disabled — report configuration presence only, never the key value.
     status["groq_configured"] = "yes" if settings.groq_api_key else "no"
     status["groq_model"]      = settings.groq_model if settings.groq_api_key else "—"
+    status["groq_enabled"]    = False
+    status["llm_provider"]    = "torch_local"
     return status
+
+
+@app.get("/api/llm/status")
+def llm_status():
+    """Local LLM provider status.
+
+    Returns provider, model, local path, load status, device and offline
+    enforcement flags. Never exposes API keys or secret environment values.
+    """
+    from content_engine.llm.torch_backend import get_torch_status
+
+    return safe_jsonify(get_torch_status())
 
 
 # ── Individual ML model endpoints ─────────────────────────────────────────────
@@ -590,7 +641,9 @@ def model_status():
 async def assess_quality(file: UploadFile = File(...)):
     path = await validate_upload(file)
     try:
-        result = get_quality_assessor().assess(str(path))
+        # CLIP inference is CPU/GPU-bound — run off the asyncio event loop so it
+        # can never stall health/status polling for other jobs.
+        result = await asyncio.to_thread(get_quality_assessor().assess, str(path))
         return {"filename": file.filename, "file_url": f"/uploads/{path.name}", "scores": result}
     except Exception as e:
         logger.error(f"Quality assessment failed: {e}")
@@ -603,8 +656,11 @@ async def detect_faces(file: UploadFile = File(...)):
     path = await validate_upload(file)
     try:
         detector = get_face_detector()
-        results  = detector.model.predict(
-            str(path), conf=settings.face_confidence_threshold, verbose=False
+        results  = await asyncio.to_thread(
+            detector.model.predict,
+            str(path),
+            conf=settings.face_confidence_threshold,
+            verbose=False,
         )
 
         face_count  = 0
@@ -646,7 +702,10 @@ async def detect_faces(file: UploadFile = File(...)):
 async def understand_content(file: UploadFile = File(...)):
     path = await validate_upload(file)
     try:
-        result = get_content_understander().understand_image(str(path))
+        # Florence-2 + CLIP inference runs off the event loop.
+        result = await asyncio.to_thread(
+            get_content_understander().understand_image, str(path)
+        )
         return {"filename": file.filename, "file_url": f"/uploads/{path.name}", **result}
     except Exception as e:
         logger.error(f"Content understanding failed: {e}")
@@ -657,7 +716,9 @@ async def understand_content(file: UploadFile = File(...)):
 async def extract_highlights(file: UploadFile = File(...), target_duration: int = 45):
     path = await validate_upload(file)
     try:
-        highlights = get_video_processor().extract_highlights(str(path), target_duration=target_duration)
+        highlights = await asyncio.to_thread(
+            get_video_processor().extract_highlights, str(path), target_duration=target_duration
+        )
         return {
             "filename":               file.filename,
             "file_url":               f"/uploads/{path.name}",
@@ -669,6 +730,244 @@ async def extract_highlights(file: UploadFile = File(...), target_duration: int 
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ── Crop intelligence endpoints ──────────────────────────────────────────────
+
+@app.post("/api/crop/analyze")
+async def analyze_crop(file: UploadFile = File(...)):
+    """Run focal-point analysis on an uploaded image (no crop rendered)."""
+    path = await validate_upload(file)
+    try:
+        from content_engine.composition import FocalAnalyzer
+        analyzer = FocalAnalyzer()
+        analysis = await asyncio.to_thread(analyzer.analyze, str(path))
+        return {
+            "filename": file.filename,
+            "file_url": f"/uploads/{path.name}",
+            "analysis": analysis.to_dict(),
+        }
+    except Exception as e:
+        logger.error(f"Crop analysis failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/crop/compute")
+async def compute_crop(
+    file: UploadFile = File(...),
+    target_w: int = Form(1080),
+    target_h: int = Form(1350),
+    focal_x: Optional[float] = Form(None),
+    focal_y: Optional[float] = Form(None),
+):
+    """
+    Compute an intelligent crop for an uploaded image and save the rendered
+    crop to /output/crops/ so it can be previewed/downloaded.
+
+    Optional ``focal_x``/``focal_y`` (normalised 0-1) let a caller override the
+    detected focal point — the crop is regenerated without re-running the full
+    AI pipeline.
+    """
+    path = await validate_upload(file)
+    try:
+        manual_focal = None
+        if focal_x is not None and focal_y is not None:
+            manual_focal = (float(focal_x), float(focal_y))
+
+        result = await asyncio.to_thread(
+            get_cropper().compute_crop, str(path), target_w, target_h,
+            manual_focal=manual_focal,
+        )
+        img, _ = await asyncio.to_thread(
+            get_cropper().crop_image, str(path), target_w, target_h,
+            manual_focal=manual_focal,
+        )
+
+        crops_dir = settings.output_dir / "crops"
+        crops_dir.mkdir(parents=True, exist_ok=True)
+        out_name = f"crop_{uuid.uuid4().hex}.jpg"
+        out_path = crops_dir / out_name
+        img.save(out_path, quality=92)
+
+        return {
+            "filename": file.filename,
+            "file_url": f"/uploads/{path.name}",
+            "crop_url": f"/output/crops/{out_name}",
+            "crop": result.to_dict(),
+        }
+    except Exception as e:
+        logger.error(f"Crop compute failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+def _resolve_image_path(image_path: str) -> Path:
+    """Resolve a web URL or filesystem path to an absolute filesystem path.
+
+    Handles:
+      - /output/... web URLs -> settings.output_dir / rest
+      - /uploads/... web URLs -> settings.upload_dir / rest
+      - Absolute filesystem paths -> used as-is (must be under output/upload dirs)
+      - Relative paths -> resolved against the project root
+
+    Rejects path traversal attempts and paths outside the approved directories.
+    """
+    try:
+        p = Path(image_path)
+
+        # Already an absolute filesystem path — allow only under output/upload dirs
+        if p.is_absolute():
+            resolved = p.resolve()
+            for base in (settings.output_dir.resolve(), settings.upload_dir.resolve()):
+                try:
+                    resolved.relative_to(base)
+                    return resolved
+                except ValueError:
+                    pass
+            raise HTTPException(
+                status_code=403,
+                detail="Image path is outside the allowed output/upload directories",
+            )
+
+        # Web URL: /output/...
+        if image_path.startswith("/output/"):
+            resolved = _output_file_path(image_path)
+            if resolved is None:
+                raise HTTPException(status_code=400, detail="Invalid output path")
+            return resolved
+
+        # Web URL: /uploads/...
+        if image_path.startswith("/uploads/"):
+            rel = image_path[len("/uploads/"):]
+            if rel.startswith("/") or ".." in Path(rel).parts:
+                raise HTTPException(status_code=400, detail="Invalid upload path")
+            return settings.upload_dir.resolve() / rel
+
+        # Relative path — resolve against the project root
+        return (Path(__file__).parent.parent / image_path).resolve()
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image path: {e}")
+
+
+@app.post("/api/crop/compute-from-path")
+async def compute_crop_from_path(request: Request):
+    """
+    Compute an intelligent crop for an existing image (no file upload).
+
+    Accepts image_path, target_w, target_h and optional focal_x/focal_y
+    (normalised 0-1) as JSON. Reuses SmartCropper so results are identical to
+    /api/crop/compute. The rendered crop is saved to /output/crops/ and its URL
+    returned so the frontend can preview it.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    image_path = body.get("image_path")
+    target_w = int(body.get("target_w", 1080))
+    target_h = int(body.get("target_h", 1350))
+    focal_x = body.get("focal_x")
+    focal_y = body.get("focal_y")
+    if not image_path:
+        raise HTTPException(status_code=400, detail="image_path is required")
+    path = _resolve_image_path(image_path)
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Image not found: {image_path}")
+    try:
+        manual_focal = None
+        if focal_x is not None and focal_y is not None:
+            manual_focal = (float(focal_x), float(focal_y))
+
+        result = await asyncio.to_thread(
+            get_cropper().compute_crop, str(path), target_w, target_h,
+            manual_focal=manual_focal,
+        )
+        img, _ = await asyncio.to_thread(
+            get_cropper().crop_image, str(path), target_w, target_h,
+            manual_focal=manual_focal,
+        )
+
+        crops_dir = settings.output_dir / "crops"
+        crops_dir.mkdir(parents=True, exist_ok=True)
+        out_name = f"crop_{uuid.uuid4().hex}.jpg"
+        out_path = crops_dir / out_name
+        img.save(out_path, quality=92)
+
+        return {
+            "filename": path.name,
+            "file_url": f"/uploads/{path.name}",
+            "crop_url": f"/output/crops/{out_name}",
+            "crop": result.to_dict(),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Crop compute from path failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/crop/inspect")
+async def inspect_crop(image_path: str, target_w: int = 1080, target_h: int = 1350):
+    """Return crop metadata for an existing image (no file upload)."""
+    from pathlib import Path as _Path
+    if not _Path(image_path).exists():
+        raise HTTPException(status_code=404, detail=f"Image not found: {image_path}")
+    try:
+        result = await asyncio.to_thread(
+            get_cropper().compute_crop, image_path, target_w, target_h,
+        )
+        return {"crop": result.to_dict()}
+    except Exception as e:
+        logger.error(f"Crop inspect failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/crop/save-override")
+async def save_crop_override(request: Request):
+    """
+    Persist a manual focal-point / crop-box override scoped to
+    (image_path, format_key). Subsequent renders of that image/format use the
+    saved adjustment instead of re-running focal detection.
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+    image_path = body.get("image_path")
+    format_key = body.get("format_key")
+    focal_point = body.get("focal_point")
+    crop_box_norm = body.get("crop_box_norm")
+    if not image_path or not format_key or focal_point is None:
+        raise HTTPException(
+            status_code=400,
+            detail="image_path, format_key and focal_point are required",
+        )
+    try:
+        fp = (float(focal_point[0]), float(focal_point[1]))
+    except Exception:
+        raise HTTPException(status_code=400, detail="focal_point must be [x, y]")
+    cbn = None
+    if crop_box_norm is not None:
+        try:
+            cbn = tuple(float(v) for v in crop_box_norm)
+        except Exception:
+            raise HTTPException(status_code=400, detail="crop_box_norm must be [x1, y1, x2, y2]")
+    store = get_override_store(
+        str(settings.output_dir / "crop_overrides.json")
+    )
+    store.set(image_path, format_key, fp, cbn if cbn else (0.0, 0.0, 1.0, 1.0))
+    return {"status": "saved", "image_path": image_path, "format_key": format_key}
+
+
+@app.get("/api/crop/override")
+async def get_crop_override(image_path: str, format_key: str):
+    """Return the persisted manual override for (image_path, format_key), if any."""
+    store = get_override_store(str(settings.output_dir / "crop_overrides.json"))
+    override = store.get(image_path, format_key)
+    if override is None:
+        return {"override": None}
+    return {"override": override}
+
+
 # ── Synchronous pipeline (small batches / testing) ────────────────────────────
 
 @app.post("/api/pipeline")
@@ -677,12 +976,20 @@ async def run_pipeline(
     event_description: str = Form("Event"),
 ):
     paths = [str(p) for p in await validate_uploads(files)]
-    try:
-        from content_engine import ContentEngine
-        engine     = ContentEngine(event_description=event_description)
-        selections = engine.select_assets(paths)
-        return safe_jsonify({"event": event_description, "total": len(selections), "selections": _serialise_selections(selections)})
+    # Full ML pipeline is CPU/GPU-bound — run off the event loop so it cannot
+    # stall health/status polling for other (in-flight) jobs.
+    return await asyncio.to_thread(_run_pipeline_sync, paths, event_description)
 
+
+def _run_pipeline_sync(paths: List[str], event_description: str):
+    from content_engine import ContentEngine
+
+    try:
+        engine = ContentEngine(event_description=event_description)
+        selections = engine.select_assets(paths)
+        return safe_jsonify(
+            {"event": event_description, "total": len(selections), "selections": _serialise_selections(selections)}
+        )
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -904,47 +1211,26 @@ def _try_load_job_from_redis(job_id: str) -> Optional[dict]:
 @app.get("/api/jobs/{job_id}/status")
 async def job_status(job_id: str):
     """
-    Poll job status. Works for both Celery and APScheduler jobs.
+    Poll job status. Reads the authoritative in-memory job registry only.
+
+    Redis and Celery are deliberately NOT queried here. When Redis is down each
+    connection attempt costs ~2 s, which made this lightweight endpoint take
+    seconds (and blocked the asyncio event loop). The background executor runs
+    generation off the event loop, so it can never stall this handler.
+
     Returns: {job_id, status, progress: {step, pct}, backend, error?}
     """
-    # 1) Redis — most up-to-date, written by Celery tasks
-    redis_job = _try_load_job_from_redis(job_id)
-    if redis_job and redis_job.get("status"):
-        return safe_jsonify({
-            "job_id": job_id,
-            "status": redis_job.get("status"),
-            "progress": redis_job.get("progress", {}) or {},
-            "backend": "redis",
-            "error": redis_job.get("error"),
-            "result": redis_job.get("result"),
-        })
-
-    # 2) Celery AsyncResult state (fallback)
-    try:
-        from celery.result import AsyncResult
-        from api.worker import celery_app
-        result = AsyncResult(job_id, app=celery_app)
-        info   = result.info or {}
-        return safe_jsonify({
-            "job_id":   job_id,
-            "status":   result.state,
-            "progress": info if isinstance(info, dict) else {},
-            "backend":  "celery",
-            "error":    str(info) if result.state == "FAILURE" else None,
-        })
-    except Exception as e:
-        # 3) APScheduler in-memory store (fallback for scheduler jobs)
-        from api.scheduler import get_job
-        job = get_job(job_id)
-        if job:
-            return safe_jsonify({
-                "job_id":   job_id,
-                "status":   job["status"],
-                "progress": job.get("progress", {}),
-                "backend":  "apscheduler",
-                "error":    job.get("error"),
-            })
-        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found: {e}")
+    from api.scheduler import get_job
+    job = get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
+    return safe_jsonify({
+        "job_id":   job_id,
+        "status":   job.get("status", "pending"),
+        "progress": job.get("progress", {"step": "queued", "pct": 0}) or {},
+        "backend":  "apscheduler",
+        "error":    job.get("error"),
+    })
 
 
 @app.post("/api/jobs/{job_id}/cancel")
@@ -973,62 +1259,111 @@ async def cancel_job(job_id: str):
     return safe_jsonify({"job_id": job_id, "status": "cancelled"})
 
 
+def _output_file_path(web_url: str) -> Optional[Path]:
+    """Map a /output/... web URL back to a filesystem path under settings.output_dir.
+
+    Returns None when the URL is not inside the output tree (refuses to escape
+    the output directory — never exposes arbitrary filesystem paths).
+    """
+    try:
+        if not isinstance(web_url, str) or not web_url.startswith("/output/"):
+            return None
+        rel = web_url[len("/output/"):]
+        if rel.startswith("/") or ".." in Path(rel).parts:
+            return None
+        return settings.output_dir.resolve() / rel
+    except Exception:
+        return None
+
+
+def _verify_completed_output(result: dict) -> None:
+    """Verify a completed job actually produced output files on disk.
+
+    Raises HTTP 500 with a clear message when output is missing, so the
+    frontend never treats a completed-but-empty job as a success.
+    """
+    files = result.get("files") or {}
+    output_dir = result.get("output_dir")
+
+    if output_dir:
+        try:
+            if not Path(output_dir).is_dir():
+                raise HTTPException(
+                    status_code=500,
+                    detail=(
+                        "Generation completed, but the output directory is missing. "
+                        "The generated files may have been cleaned up."
+                    ),
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+
+    if not files:
+        raise HTTPException(
+            status_code=500,
+            detail="Generation completed, but no output files were produced.",
+        )
+
+    missing = []
+    for web_url in list(files.values()):
+        p = _output_file_path(web_url)
+        if p is None or not p.is_file():
+            missing.append(web_url)
+
+    if missing:
+        raise HTTPException(
+            status_code=500,
+            detail=(
+                "Generation completed, but output files are missing: "
+                + ", ".join(missing[:5])
+                + (f" (and {len(missing) - 5} more)" if len(missing) > 5 else "")
+            ),
+        )
+
+
 @app.get("/api/jobs/{job_id}/result")
 async def job_result(job_id: str):
-    """Retrieve completed job result (both backends).
+    """Retrieve completed job result (APScheduler in-memory store).
 
-    Priority order:
-      1) Redis payload written by workers (CELERY) — if status=SUCCESS and result exists.
-      2) APScheduler in-memory store.
-      3) Celery AsyncResult.
+    The in-memory job registry is the authoritative source; Redis/Celery are not
+    queried, so result retrieval stays fast and predictable without Redis.
+
+    Terminal/error semantics:
+      - Unknown job       → HTTP 404
+      - Job not complete  → HTTP 409 (Conflict) — client should keep polling
+      - Job failed        → HTTP 500 with the job error
+      - Job completed     → returns real result; verifies output files exist
     """
-
-    # 1) Redis (most reliable if job:{job_id} exists)
-    redis_job = _try_load_job_from_redis(job_id)
-    if redis_job:
-        if redis_job.get("status") in ("SUCCESS", "completed"):
-            # Redis payloads may store the full output under `result`.
-            redis_result = redis_job.get("result")
-            if redis_result is not None:
-                return safe_jsonify(redis_result)
-
-            # If status is SUCCESS but result is missing, do not lie to the frontend.
-            # Return a consistent terminal error.
-            raise HTTPException(
-                status_code=500,
-                detail="Job marked SUCCESS but no result payload found in Redis.",
-            )
-        elif redis_job.get("status") in ("PROGRESS", "pending", "queued", "STARTED", "running"):
-            return {"job_id": job_id, "status": redis_job.get("status"), "message": "Job not yet complete"}
-
-    # 2) APScheduler store
     from api.scheduler import get_job
     job = get_job(job_id)
-    if job:
-        if job["status"] == "completed":
-            return safe_jsonify(job["result"])
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
 
-        elif job["status"] == "failed":
-            raise HTTPException(status_code=500, detail=job.get("error", "Job failed"))
-        else:
-            return {"job_id": job_id, "status": job["status"], "message": "Job not yet complete"}
+    status = job["status"]
+    if status == "completed":
+        result = job.get("result")
+        if result is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Job marked completed but no result payload stored.",
+            )
+        _verify_completed_output(result)
+        return safe_jsonify(result)
 
-    # 3) Celery
-    try:
-        from celery.result import AsyncResult
-        from api.worker import celery_app
-        result = AsyncResult(job_id, app=celery_app)
-        if result.state == "SUCCESS":
-            return safe_jsonify(result.result)
+    if status == "failed":
+        raise HTTPException(status_code=500, detail=job.get("error", "Job failed"))
 
-        elif result.state == "FAILURE":
-            raise HTTPException(status_code=500, detail=str(result.info))
-        else:
-            return {"job_id": job_id, "status": result.state, "message": "Job not yet complete"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    raise HTTPException(
+        status_code=409,
+        detail={
+            "job_id": job_id,
+            "status": status,
+            "message": "Job not yet complete",
+            "progress": job.get("progress", {}),
+        },
+    )
 
 
 
@@ -1107,68 +1442,31 @@ async def get_enhanced_assets(
     from PIL import Image
     import imagehash
 
-    # Get full job data first
-    job_data = None
-    assets = None
-    redis_job = _try_load_job_from_redis(job_id)
-    if redis_job:
-        # Check both top-level job and result for assets
-        job_data = redis_job
-        assets = job_data.get('assets') or (job_data.get('result') or {}).get('assets')
-        if not assets:
-            # If job is still processing, return pending
-            if redis_job.get("status") not in ("SUCCESS", "completed"):
-                return {
-                    'job_id': job_id,
-                    'top_overall': [],
-                    'per_category': {},
-                    'stats': {
-                        'total': 0,
-                        'unique': 0,
-                        'deduped': 0,
-                        'duplicates_removed': 0,
-                        'pending_processing': True
-                    }
-                }
+    # Get full job data from the authoritative in-memory registry (fast, locked).
+    # Redis/Celery are not queried here, so this endpoint stays responsive even
+    # when Redis is unavailable.
+    from api.scheduler import get_job
+    job_data = get_job(job_id)
+    if not job_data:
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
 
-    # 2) APScheduler fallback
-    if not assets:
-        from api.scheduler import get_job
-        scheduler_job = get_job(job_id)
-        if scheduler_job:
-            job_data = scheduler_job
-            assets = job_data.get('assets') or (job_data.get('result') or {}).get('assets')
-            if scheduler_job.get("status") == "failed":
-                raise HTTPException(status_code=500, detail=scheduler_job.get("error", "Job failed"))
-            elif scheduler_job.get("status") not in ("completed", "SUCCESS") or not assets:
-                return {
-                    'job_id': job_id,
-                    'top_overall': [],
-                    'per_category': {},
-                    'stats': {
-                        'total': 0,
-                        'unique': 0,
-                        'deduped': 0,
-                        'duplicates_removed': 0,
-                        'pending_processing': True
-                    }
-                }
-
-    # 3) Celery AsyncResult fallback
-    if not assets:
-        try:
-            from celery.result import AsyncResult
-            from api.worker import celery_app
-            result = AsyncResult(job_id, app=celery_app)
-            if result.ready():
-                job_data = result.result
-                assets = (job_data or {}).get('assets')
-            else:
-                raise HTTPException(400, "Job not completed yet")
-        except HTTPException:
-            raise
-        except Exception as e:
-            raise HTTPException(404, "Job not found") from e
+    assets = job_data.get('assets') or (job_data.get('result') or {}).get('assets')
+    status = job_data.get("status")
+    if status == "failed":
+        raise HTTPException(status_code=500, detail=job_data.get("error", "Job failed"))
+    if status not in ("completed", "SUCCESS") or not assets:
+        return {
+            'job_id': job_id,
+            'top_overall': [],
+            'per_category': {},
+            'stats': {
+                'total': 0,
+                'unique': 0,
+                'deduped': 0,
+                'duplicates_removed': 0,
+                'pending_processing': True
+            }
+        }
 
     # Normalize assets list
     all_assets = list(assets or [])
@@ -1283,16 +1581,7 @@ async def get_categorized_assets(job_id: str):
     from api.scheduler import get_job
     job_data = get_job(job_id)
     if not job_data:
-        try:
-            from celery.result import AsyncResult
-            from api.worker import celery_app
-            result = AsyncResult(job_id, app=celery_app)
-            if result.ready():
-                job_data = {"status": "completed", "result": result.result, "assets": []}
-            else:
-                raise HTTPException(400, "Job not completed yet")
-        except Exception as e:
-            raise HTTPException(404, "Job not found") from e
+        raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
 
     if job_data.get('status') not in ('completed', 'SUCCESS'):
         raise HTTPException(400, "Job not completed yet")
@@ -1661,16 +1950,7 @@ async def get_enriched_case_study(job_id: str):
     try:
         job_data = get_job(job_id)
         if not job_data:
-            try:
-                from celery.result import AsyncResult
-                from api.worker import celery_app
-                result = AsyncResult(job_id, app=celery_app)
-                if result.ready():
-                    job_data = {"status": "completed", "result": result.result, "assets": []}
-                else:
-                    raise HTTPException(400, "Job not completed yet")
-            except Exception as e:
-                raise HTTPException(404, "Job not found") from e
+            raise HTTPException(status_code=404, detail=f"Job '{job_id}' not found")
 
         if job_data.get('status') not in ('completed', 'SUCCESS'):
             raise HTTPException(400, "Job not completed yet")
@@ -1705,6 +1985,7 @@ async def get_enriched_case_study(job_id: str):
 
             quality_scores: list[float] = []
             aesthetic_scores: list[float] = []
+            confidence_scores: list[float] = []
             face_counts: list[int] = []
 
             category_keywords = {
@@ -1730,6 +2011,7 @@ async def get_enriched_case_study(job_id: str):
 
                     quality_scores.append(qs)
                     aesthetic_scores.append(aes)
+                    confidence_scores.append(final_score)
                     face_counts.append(face_count)
 
                     # Determine category
@@ -1772,6 +2054,7 @@ async def get_enriched_case_study(job_id: str):
 
             avg_quality_score = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
             avg_aesthetic_score = sum(aesthetic_scores) / len(aesthetic_scores) if aesthetic_scores else 0.0
+            avg_confidence_score = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
             avg_face_count = sum(face_counts) / len(face_counts) if face_counts else 0.0
 
             # Sort top assets by score
@@ -1787,6 +2070,7 @@ async def get_enriched_case_study(job_id: str):
             'selected_assets_count': len(top_assets),
             'avg_quality_score': avg_quality_score,
             'avg_aesthetic_score': avg_aesthetic_score,
+            'avg_confidence_score': avg_confidence_score,
             'avg_face_count': avg_face_count,
             'category_distribution': dict(category_distribution),
             'duplicates_removed': 0,
@@ -1821,6 +2105,13 @@ try:
     app.include_router(photo_intel_router)
 except Exception as e:
     pass
+
+# Add Brand Intelligence router (Phase 1 — Brand Reference Library)
+try:
+    from api.brand_intel_routes import router as brand_intel_router
+    app.include_router(brand_intel_router)
+except Exception as e:
+    logger.warning(f"Brand Intelligence router failed to load: {e}")
 
 # ── Brand threshold control ────────────────────────────────────────────────────
 
@@ -1859,7 +2150,9 @@ async def generate_content(
     event_description: str = Form("Event"),
 ):
     paths = [str(p) for p in await validate_uploads(files)]
-    return await _sync_generate(paths, event_name, event_description)
+    # Synchronous generation runs the orchestrator (ML + layout + copy) — off the
+    # event loop so it cannot stall health/status polling.
+    return await asyncio.to_thread(_sync_generate, paths, event_name, event_description)
 
 
 # ── Groq caption regeneration (on-demand, no ML needed) ──────────────────────
@@ -1897,7 +2190,19 @@ async def regenerate_captions(
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"Qwen unavailable: {e}")
 
-    result: dict = {"backend": gen.backend, "event": event_name, "provider": "qwen2.5-1.5b-instruct"}
+    result: dict = {
+        "backend": gen.backend,
+        "event": event_name,
+        "provider": "qwen2.5-1.5b-instruct",
+        "model": "Qwen2.5-1.5B-Instruct",
+        "model_path": str(QWEN_MODEL_PATH),
+        "local_only": True,
+        "remote_inference_disabled": True,
+    }
+    try:
+        result["provider_status"] = gen._provider.status()
+    except Exception:
+        result["provider_status"] = {"backend": gen.backend}
 
     try:
         if platform in ("linkedin", "all"):
@@ -1967,6 +2272,7 @@ if __name__ == "__main__":
         "api.main:app",
         host=settings.api_host,
         port=settings.api_port,
-        reload=True,
+        reload=False,  # stable single-process dev server; --reload restarts the
+                       # process and can duplicate schedulers / model preloaders
         log_level=settings.log_level.lower(),
     )

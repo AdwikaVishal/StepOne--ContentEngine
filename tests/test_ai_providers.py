@@ -40,6 +40,7 @@ from content_engine.providers.base import (
     ProviderError,
 )
 from content_engine.providers.llm.mlx import MLXProvider
+from content_engine.providers.llm.torch_local import TorchLocalProvider
 from content_engine.providers.llm.groq import GroqProvider
 from content_engine.providers.vision.local import LocalVisionProvider
 from content_engine.providers.vision.gemini import GeminiVisionProvider
@@ -104,11 +105,11 @@ class TestCredentialValidation:
 
 
 class TestProviderSelectionLocal:
-    def test_local_returns_mlx_provider(self):
+    def test_local_returns_torch_provider(self):
         with patch.dict(os.environ, {"AI_EXECUTION_MODE": "local"}):
             provider = get_llm_provider()
-            assert isinstance(provider, MLXProvider)
-            assert provider.name == "mlx_local"
+            assert isinstance(provider, TorchLocalProvider)
+            assert provider.name == "torch_local"
             assert provider.requires_api_key is False
 
     def test_local_returns_local_vision_provider(self):
@@ -124,43 +125,32 @@ class TestProviderSelectionLocal:
             assert isinstance(provider, LocalVisionProvider)
 
 
-class TestProviderSelectionCloud:
-    def test_cloud_returns_groq_provider(self):
-        with patch.dict(
-            os.environ,
-            {
-                "AI_EXECUTION_MODE": "cloud_testing",
-                "GROQ_API_KEY": "test-groq-key",
-            },
-        ):
-            provider = get_llm_provider()
-            assert isinstance(provider, GroqProvider)
-            assert provider.name == "groq"
-            assert provider.requires_api_key is True
+class TestCloudTestingRejected:
+    """cloud_testing mode is unreachable — Groq/Gemini remote inference disabled."""
 
-    def test_cloud_returns_groq_vision_provider(self):
+    def test_cloud_llm_provider_rejected(self):
         with patch.dict(
             os.environ,
-            {
-                "AI_EXECUTION_MODE": "cloud_testing",
-                "GROQ_API_KEY": "test-groq-key",
-            },
+            {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "test-groq-key"},
         ):
-            provider = get_vision_provider()
-            assert isinstance(provider, GroqVisionProvider)
-            assert provider.name == "groq"
-            assert provider.requires_api_key is True
+            with pytest.raises(ConfigurationError):
+                get_llm_provider()
 
-    def test_cloud_returns_groq_caption_provider(self):
+    def test_cloud_vision_provider_rejected(self):
         with patch.dict(
             os.environ,
-            {
-                "AI_EXECUTION_MODE": "cloud_testing",
-                "GROQ_API_KEY": "test-groq-key",
-            },
+            {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "test-groq-key"},
         ):
-            provider = get_caption_provider()
-            assert isinstance(provider, GroqVisionProvider)
+            with pytest.raises(ConfigurationError):
+                get_vision_provider()
+
+    def test_cloud_caption_provider_rejected(self):
+        with patch.dict(
+            os.environ,
+            {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "test-groq-key"},
+        ):
+            with pytest.raises(ConfigurationError):
+                get_caption_provider()
 
 
 # ── Cloud mode fail-closed ───────────────────────────────────────────
@@ -213,8 +203,8 @@ class TestLocalNoCloudSDKs:
 # ── Cloud mode does not import local model packages ──────────────────
 
 class TestCloudNoLocalModels:
-    def test_cloud_provider_init_does_not_import_local_model_packages(self):
-        """Cloud provider init must not import sentence_transformers, transformers, ultralytics, mlx_lm."""
+    def test_cloud_provider_init_raises_without_local_imports(self):
+        """cloud_testing raises ConfigurationError before any local model package is imported."""
         forbidden = ["sentence_transformers", "transformers", "ultralytics", "mlx_lm"]
         modules_before = set(m for m in sys.modules if any(f in m for f in forbidden))
         with patch.dict(
@@ -225,62 +215,58 @@ class TestCloudNoLocalModels:
                 "GEMINI_API_KEY": "test-gemini-key",
             },
         ):
-            get_llm_provider()
-            get_vision_provider()
+            with pytest.raises(ConfigurationError):
+                get_llm_provider()
+            with pytest.raises(ConfigurationError):
+                get_vision_provider()
         modules_after = set(sys.modules)
         newly_forbidden = set(m for m in modules_after if any(f in m for f in forbidden)) - modules_before
         assert not newly_forbidden, f"Local model packages loaded in cloud mode: {newly_forbidden}"
 
 
-# ── Mode switching cache invalidation ────────────────────────────────
+# ── Mode consistency (local-only) ────────────────────────────────────
 
-class TestModeSwitching:
-    def test_switching_modes_returns_different_providers(self):
-        """Switching AI_EXECUTION_MODE must not return a cached provider from the previous mode."""
-        with patch.dict(os.environ, {"AI_EXECUTION_MODE": "local"}):
-            local_llm = get_llm_provider()
-        with patch.dict(os.environ, {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "k1", "GEMINI_API_KEY": "k2"}):
-            cloud_llm = get_llm_provider()
-        assert type(local_llm) is not type(cloud_llm)
-
-    def test_switching_back_to_local_returns_mlx(self):
-        with patch.dict(os.environ, {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "k1", "GEMINI_API_KEY": "k2"}):
-            get_llm_provider()
+class TestModeConsistency:
+    def test_local_always_returns_torch_provider(self):
+        """Local mode always returns TorchLocalProvider (Qwen), never Groq."""
         with patch.dict(os.environ, {"AI_EXECUTION_MODE": "local"}):
             provider = get_llm_provider()
-            assert isinstance(provider, MLXProvider)
+            assert isinstance(provider, TorchLocalProvider)
+            assert provider.name == "torch_local"
+
+    def test_cloud_testing_raises_configuration_error(self):
+        """cloud_testing mode is unreachable for any provider."""
+        with patch.dict(os.environ, {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "k1", "GEMINI_API_KEY": "k2"}):
+            with pytest.raises(ConfigurationError):
+                get_llm_provider()
+            with pytest.raises(ConfigurationError):
+                get_vision_provider()
 
 
-# ── Output schema compatibility ──────────────────────────────────────
+# ── Output schema compatibility (local-only) ─────────────────────────
 
 class TestSchemaCompatibility:
     def test_llm_provider_interface(self):
-        """Both LLM providers implement the same interface."""
+        """The local LLM provider implements the LLMProvider interface."""
         with patch.dict(os.environ, {"AI_EXECUTION_MODE": "local"}):
             local = get_llm_provider()
-        with patch.dict(os.environ, {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "k1", "GEMINI_API_KEY": "k2"}):
-            cloud = get_llm_provider()
-        for p in (local, cloud):
-            assert hasattr(p, "generate")
-            assert hasattr(p, "name")
-            assert hasattr(p, "requires_api_key")
-            assert hasattr(p, "is_available")
-            assert isinstance(p.name, str)
-            assert isinstance(p.requires_api_key, bool)
-            assert isinstance(p.is_available(), bool)
+        assert hasattr(local, "generate")
+        assert hasattr(local, "name")
+        assert hasattr(local, "requires_api_key")
+        assert hasattr(local, "is_available")
+        assert isinstance(local.name, str)
+        assert isinstance(local.requires_api_key, bool)
+        assert isinstance(local.is_available(), bool)
 
     def test_vision_provider_interface(self):
-        """Both vision providers implement the same interface."""
+        """The local vision provider implements the VisionProvider interface."""
         with patch.dict(os.environ, {"AI_EXECUTION_MODE": "local"}):
             local = get_vision_provider()
-        with patch.dict(os.environ, {"AI_EXECUTION_MODE": "cloud_testing", "GROQ_API_KEY": "k1", "GEMINI_API_KEY": "k2"}):
-            cloud = get_vision_provider()
-        for p in (local, cloud):
-            assert hasattr(p, "understand_image")
-            assert hasattr(p, "caption_image")
-            assert hasattr(p, "name")
-            assert hasattr(p, "requires_api_key")
-            assert hasattr(p, "is_available")
+        assert hasattr(local, "understand_image")
+        assert hasattr(local, "caption_image")
+        assert hasattr(local, "name")
+        assert hasattr(local, "requires_api_key")
+        assert hasattr(local, "is_available")
 
 
 # ── Error types ──────────────────────────────────────────────────────
@@ -333,10 +319,7 @@ class TestMockAdapters:
             for a in assets:
                 assert a.get("mock") is True
 
-    def test_semantic_brand_matcher_is_separate(self):
-        """SemanticBrandMatcher uses Groq, not CLIP scores."""
-        with patch.dict(os.environ, {"GROQ_API_KEY": "test-key"}):
-            matcher = SemanticBrandMatcher()
-            # describe_brand_fit would call Groq; just verify it's constructed
-            assert matcher is not None
-            assert matcher._groq.name == "groq"
+    def test_semantic_brand_matcher_is_local_only(self):
+        """SemanticBrandMatcher is cloud_testing-only and cannot construct a Groq client."""
+        with pytest.raises(ConfigurationError):
+            SemanticBrandMatcher()

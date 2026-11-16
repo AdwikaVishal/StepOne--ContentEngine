@@ -18,6 +18,8 @@ Job lifecycle:
 import uuid
 import traceback
 import json
+import time
+import threading
 from datetime import datetime
 from typing import Dict, Any, Optional
 from concurrent.futures import ThreadPoolExecutor
@@ -28,9 +30,27 @@ from config import settings
 
 logger = get_logger(__name__)
 
+# ── Redis availability cache ──────────────────────────────────────────────────
+# Redis is unavailable in local dev. Caching the result avoids paying a ~2 s
+# connection timeout on every job update / status read when Redis is down.
+_redis_available_cache = {"value": None, "checked_at": 0.0}
+
+
+def _redis_available() -> bool:
+    """Cached Redis availability.
+
+    Populated by the startup background probe. The request path never performs a
+    synchronous Redis probe, so /health, /submit and job updates never block on
+    a dead Redis connection.
+    """
+    return _redis_available_cache["value"]
+
+
 # ── Redis helpers ──────────────────────────────────────────────────────────────
 def _get_redis_client():
-    """Get Redis client if available, else None."""
+    """Get Redis client if available, else None. Never blocks on a dead Redis."""
+    if not _redis_available():
+        return None
     try:
         import redis
         r = redis.from_url(settings.redis_url, socket_connect_timeout=1)
@@ -65,14 +85,32 @@ def _load_job_from_redis(job_id: str) -> Optional[Dict[str, Any]]:
 
 # ── In-memory store ───────────────────────────────────────────────────────────
 # {job_id: {status, type, result, error, created_at, updated_at, progress, assets, event_name, event_description}}
+# This dict is the single authoritative job registry for the APScheduler backend.
+# It is guarded by _jobs_lock so status reads (async event loop) and job updates
+# (background executor threads) never corrupt each other. Locks are held only for
+# dict operations (microseconds) — never during model inference or file I/O.
 _jobs: Dict[str, Dict[str, Any]] = {}
+_jobs_lock = threading.Lock()
 
-# Thread pool — concurrency=1 keeps ML memory usage bounded
+# Thread pool — concurrency=1 keeps ML memory usage bounded. Jobs run here, off
+# the FastAPI event loop, so generation can never block health/status requests.
 _executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="ce_job")
 
-# APScheduler instance (also used for cleanup scheduling in main.py)
-_scheduler = BackgroundScheduler(daemon=True)
-_scheduler.start()
+# APScheduler instance (also used for cleanup scheduling in main.py).
+# Started exactly once per process; guarded against duplicate starts on reload.
+_scheduler: Optional[BackgroundScheduler] = None
+_scheduler_started = False
+
+
+def get_scheduler() -> BackgroundScheduler:
+    """Return the shared APScheduler instance, starting it exactly once."""
+    global _scheduler, _scheduler_started
+    with _jobs_lock:
+        if not _scheduler_started:
+            _scheduler = BackgroundScheduler(daemon=True)
+            _scheduler.start()
+            _scheduler_started = True
+        return _scheduler
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
@@ -103,34 +141,45 @@ def submit_generate_job(
 
 
 def get_job(job_id: str) -> Optional[Dict[str, Any]]:
-    """Return job dict from memory first, then Redis if available."""
-    if job_id in _jobs:
-        return _jobs[job_id]
-    return _load_job_from_redis(job_id)
+    """Return a *copy* of the job dict from the in-memory store.
+
+    In-memory is the authoritative source for the APScheduler backend. Redis is
+    written to (best-effort, fire-and-forget) for cross-process visibility when
+    it is available, but status/result reads never block on Redis — that is what
+    made /api/jobs/{id}/status take seconds when Redis was down.
+
+    The returned dict is a shallow copy so callers cannot mutate shared state.
+    Lock is held only for the dict lookup (microseconds).
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+    if job is None:
+        return None
+    return dict(job)
 
 
 def set_job_data(job_id: str, **kwargs) -> None:
-    """Set or update job data (including assets, event_name, etc.) in both memory and Redis."""
-    if job_id not in _jobs:
-        _jobs[job_id] = {
-            "job_id": job_id,
-            "type": "generate",
-            "status": "pending",
-            "progress": {"step": "queued", "pct": 0},
-            "result": None,
-            "error": None,
-            "assets": [],
-            "event_name": "",
-            "event_description": "",
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
-        }
-    _update(job_id, **kwargs)
-
-
-def get_scheduler() -> BackgroundScheduler:
-    """Return the shared APScheduler instance (used by main.py for cleanup)."""
-    return _scheduler
+    """Set or update job data in memory (authoritative), then mirror to Redis best-effort."""
+    with _jobs_lock:
+        if job_id not in _jobs:
+            _jobs[job_id] = {
+                "job_id": job_id,
+                "type": "generate",
+                "status": "pending",
+                "progress": {"step": "queued", "pct": 0},
+                "result": None,
+                "error": None,
+                "assets": [],
+                "event_name": "",
+                "event_description": "",
+                "created_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.utcnow().isoformat(),
+            }
+        _jobs[job_id].update(kwargs)
+        _jobs[job_id]["updated_at"] = datetime.utcnow().isoformat()
+        snapshot = dict(_jobs[job_id])
+    # Redis mirror is best-effort and never blocks status reads or the lock.
+    _save_job_to_redis(job_id, snapshot)
 
 
 # ── Per-job threshold storage ──────────────────────────────────────────────────
@@ -194,23 +243,24 @@ def _new_job(job_type: str, asset_paths: list = None, event_name: str = "", even
         "created_at": datetime.utcnow().isoformat(),
         "updated_at": datetime.utcnow().isoformat(),
     }
-    _jobs[job_id] = job_data
+    with _jobs_lock:
+        _jobs[job_id] = job_data
+    # Redis mirror is best-effort and never blocks status reads or the lock.
     _save_job_to_redis(job_id, job_data)
     return job_id
 
 
 def _update(job_id: str, **kwargs) -> None:
-    if job_id in _jobs:
-        _jobs[job_id].update(kwargs)
-        _jobs[job_id]["updated_at"] = datetime.utcnow().isoformat()
-        _save_job_to_redis(job_id, _jobs[job_id])
-    else:
-        # If only in Redis, update it
-        job_data = _load_job_from_redis(job_id)
-        if job_data:
-            job_data.update(kwargs)
-            job_data["updated_at"] = datetime.utcnow().isoformat()
-            _save_job_to_redis(job_id, job_data)
+    with _jobs_lock:
+        if job_id in _jobs:
+            _jobs[job_id].update(kwargs)
+            _jobs[job_id]["updated_at"] = datetime.utcnow().isoformat()
+            snapshot = dict(_jobs[job_id])
+        else:
+            snapshot = None
+    # Redis mirror is best-effort and never blocks status reads or the lock.
+    if snapshot is not None:
+        _save_job_to_redis(job_id, snapshot)
 
 
 def _run_pipeline(job_id: str, asset_paths: list, event_description: str) -> None:

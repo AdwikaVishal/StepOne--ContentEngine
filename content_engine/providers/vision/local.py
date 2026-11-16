@@ -5,10 +5,14 @@ Used in local mode only. Wraps the existing local model implementations
 without adding new inference logic.
 """
 
+import time
 from typing import Any, Dict, List, Optional
 
 from content_engine.photo_intelligence.blip_captioner import get_blip_captioner
-from content_engine.utils.mps_safe import FLORENCE_DEVICE, FLORENCE_DTYPE, MPS_DEVICE
+from content_engine.utils.mps_safe import FLORENCE_DEVICE, FLORENCE_DTYPE, MPS_DEVICE, register_model
+from content_engine.utils.device_manager import get_device_manager
+from content_engine.utils.model_registry import get_clip, get_clip_device
+from config import CLIP_MODEL_PATH, FLORENCE_MODEL_PATH
 
 
 class LocalVisionProvider:
@@ -27,23 +31,57 @@ class LocalVisionProvider:
             import torch
             from transformers import AutoModelForCausalLM, AutoProcessor
 
+            t0 = time.perf_counter()
             self._florence_model = AutoModelForCausalLM.from_pretrained(
-                "microsoft/Florence-2-base",
+                FLORENCE_MODEL_PATH,
                 torch_dtype=FLORENCE_DTYPE,
                 trust_remote_code=True,
                 attn_implementation="eager",
+                local_files_only=True,
             ).to(FLORENCE_DEVICE)
             self._florence_processor = AutoProcessor.from_pretrained(
-                "microsoft/Florence-2-base",
+                FLORENCE_MODEL_PATH,
                 trust_remote_code=True,
+                local_files_only=True,
             )
+            model = self._florence_model
+            model.eval()
+            load_time = time.perf_counter() - t0
+
+            # Register with DeviceManager (Florence-2 stays on CPU)
+            dm = get_device_manager()
+            if dm is not None:
+                dm.register_model(
+                    "florence",
+                    model=model,
+                    device=FLORENCE_DEVICE,
+                    vram_mb=0.0,
+                    ram_mb=932.0,
+                    load_time_seconds=load_time,
+                )
         return self._florence_model, self._florence_processor
 
     def _load_clip(self):
         if self._clip_model is None:
-            from sentence_transformers import SentenceTransformer
+            # Use the shared, thread-safe CLIP instance from the model
+            # registry instead of loading a private copy.
+            self._clip_model = get_clip()
+            model = self._clip_model
+            load_time = 0.0
 
-            self._clip_model = SentenceTransformer("clip-ViT-B-32", device=MPS_DEVICE)
+            # Register once with the DeviceManager (best-effort).
+            estimated_vram = 577.0 if str(get_clip_device()).startswith("cuda") else 0.0
+            estimated_ram = 106.0
+            dm = get_device_manager()
+            if dm is not None and not dm.is_model_loaded("clip"):
+                dm.register_model(
+                    "clip",
+                    model=model,
+                    device=get_clip_device(),
+                    vram_mb=estimated_vram,
+                    ram_mb=estimated_ram,
+                    load_time_seconds=load_time,
+                )
         return self._clip_model
 
     def understand_image(self, image_path: str) -> Dict[str, Any]:
@@ -68,6 +106,8 @@ class LocalVisionProvider:
             }
 
         try:
+            import torch
+
             model, processor = self._load_florence()
             from PIL import Image
 

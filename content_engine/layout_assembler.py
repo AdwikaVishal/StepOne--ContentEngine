@@ -14,13 +14,19 @@ Face-aware smart crop uses the already-loaded YOLOv11 face model.
 
 import subprocess
 import tempfile
+import time
 import cv2
 import numpy as np
 from pathlib import Path
 from PIL import Image, ImageDraw
 from typing import List, Tuple, Optional, Dict
-from huggingface_hub import hf_hub_download
 from ultralytics import YOLO
+from config import YOLOV11_FACE_MODEL_PATH, settings
+from content_engine.utils.device_manager import get_device_manager
+from content_engine.utils.mps_safe import register_model, MPS_DEVICE
+from content_engine.models.face_detection import FaceDetector
+from content_engine.composition import SmartCropper, FocalAnalyzer
+from content_engine.composition.smart_crop import get_override_store
 
 
 # ── Platform dimensions ───────────────────────────────────────────────────────
@@ -47,14 +53,85 @@ class LayoutAssembler:
     """
 
     def __init__(self):
-        # Lazy-load face model — reuse the same weights already on disk
-        model_path = hf_hub_download(
-            repo_id="AdamCodd/YOLOv11n-face-detection",
-            filename="model.pt",
+        # Lazy-load face model — reuse the same weights already on disk.
+        # The model is shared with the composition engine's FaceDetector so the
+        # YOLOv11-face weights are loaded exactly once per process.
+        t0 = time.perf_counter()
+        device = MPS_DEVICE
+        self._face_model = YOLO(YOLOV11_FACE_MODEL_PATH)
+        load_time = time.perf_counter() - t0
+
+        # Register with DeviceManager
+        estimated_vram = 50.0 if device.startswith("cuda") else 0.0
+        estimated_ram = 3.0
+        dm = get_device_manager()
+        if dm is not None:
+            dm.register_model(
+                "yolov11_face",
+                model=self._face_model,
+                device=device,
+                vram_mb=estimated_vram,
+                ram_mb=estimated_ram,
+                load_time_seconds=load_time,
+            )
+
+        # Share the loaded face model with the composition engine so weights
+        # are not duplicated. FaceDetector is lazy: the model is already loaded
+        # here, so it just wraps the existing instance.
+        self._face_detector = FaceDetector(model=self._face_model)
+
+        # Lazy-created subject-aware cropper (one per assembler, reused across
+        # every tile/format so focal analysis runs once per source image).
+        self._cropper: Optional[SmartCropper] = None
+
+        # Persisted manual crop overrides (scoped to image + format).
+        self._override_store = get_override_store(
+            str(settings.output_dir / "crop_overrides.json")
         )
-        self._face_model = YOLO(model_path)
+
         # Template position cache — avoids recomputing layout geometry
         self._template_cache: Dict[str, tuple] = {}
+
+    def _get_cropper(self) -> SmartCropper:
+        """Lazy-build the shared smart cropper (analysis cached per image)."""
+        if self._cropper is None:
+            self._cropper = SmartCropper(
+                analyzer=FocalAnalyzer(face_detector=self._face_detector)
+            )
+        return self._cropper
+
+    @staticmethod
+    def _format_key_for(target_w: int, target_h: int) -> str:
+        """Derive a stable format key from target dimensions."""
+        ratio = round(target_w / target_h, 4)
+        for key, (w, h) in {
+            "linkedin_1_1": (1080, 1080),
+            "carousel_4_5": (1080, 1350),
+            "story_9_16": (1080, 1920),
+            "landscape_16_9": (1920, 1080),
+        }.items():
+            if (w, h) == (target_w, target_h):
+                return key
+        return f"custom_{target_w}x{target_h}_{ratio}"
+
+    def _override_focal(
+        self,
+        image_path: str,
+        target_w: int,
+        target_h: int,
+        manual_focal: Optional[Tuple[float, float]] = None,
+        format_key: Optional[str] = None,
+    ) -> Optional[Tuple[float, float]]:
+        """Return a manual focal point: explicit argument takes precedence,
+        otherwise fall back to a persisted user override for this image/format."""
+        if manual_focal is not None:
+            return manual_focal
+        key = format_key or self._format_key_for(target_w, target_h)
+        override = self._override_store.get(image_path, key)
+        if override and override.get("focal_point"):
+            fp = override["focal_point"]
+            return (float(fp[0]), float(fp[1]))
+        return None
 
     # ── Smart crop ────────────────────────────────────────────────────────────
 
@@ -63,52 +140,71 @@ class LayoutAssembler:
         image_path: str,
         target_w: int,
         target_h: int,
+        format_key: Optional[str] = None,
+        manual_focal: Optional[Tuple[float, float]] = None,
     ) -> Image.Image:
         """
-        Crop an image to (target_w × target_h) keeping the most important
-        subject in frame.
+        Crop an image to (target_w × target_h) using the subject-aware
+        composition engine.
 
-        Strategy:
-          1. Detect faces — if found, centre the crop on the primary face cluster
-          2. No faces — fall back to centre crop
-          3. Resize to exact target dimensions with LANCZOS
+        The crop is calculated from the detected focal region (faces, subjects,
+        saliency) rather than a simple centre crop, and is computed
+        independently for each target aspect ratio. The original image file is
+        never modified.
 
-        Never upscales beyond 2× to avoid visible pixelation.
+        A persisted manual focal-point override (set via the frontend Crop
+        Inspector) takes precedence over automatic focal detection.
         """
-        img = self._open_thumbnail(image_path)
-        orig_w, orig_h = img.size
-        target_ratio = target_w / target_h
-        orig_ratio   = orig_w  / orig_h
-
-        # ── Find crop anchor ──────────────────────────────────────────────────
-        anchor_x = orig_w / 2   # default: centre
-        anchor_y = orig_h / 2
-
-        try:
-            results = self._face_model.predict(image_path, conf=0.35, verbose=False)
-            if results and results[0].boxes and len(results[0].boxes) > 0:
-                boxes = results[0].boxes.xyxy.cpu().numpy()
-                # Use centroid of all detected faces as anchor
-                anchor_x = float(np.mean([(b[0] + b[2]) / 2 for b in boxes]))
-                anchor_y = float(np.mean([(b[1] + b[3]) / 2 for b in boxes]))
-        except Exception:
-            pass  # Fall back to centre crop
-
-        # ── Compute crop box ──────────────────────────────────────────────────
-        if orig_ratio > target_ratio:
-            # Image is wider than target — crop width
-            new_w = int(orig_h * target_ratio)
-            x1 = int(np.clip(anchor_x - new_w / 2, 0, orig_w - new_w))
-            crop_box = (x1, 0, x1 + new_w, orig_h)
-        else:
-            # Image is taller than target — crop height
-            new_h = int(orig_w / target_ratio)
-            y1 = int(np.clip(anchor_y - new_h / 2, 0, orig_h - new_h))
-            crop_box = (0, y1, orig_w, y1 + new_h)
-
-        img = img.crop(crop_box)
-        img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+        focal = self._override_focal(
+            image_path, target_w, target_h, manual_focal, format_key
+        )
+        img, _ = self._get_cropper().crop_image(
+            image_path, target_w, target_h, manual_focal=focal
+        )
         return img
+
+    def smart_crop_with_metadata(
+        self,
+        image_path: str,
+        target_w: int,
+        target_h: int,
+        format_key: Optional[str] = None,
+        manual_focal: Optional[Tuple[float, float]] = None,
+    ) -> Tuple[Image.Image, Dict]:
+        """
+        Like :meth:`smart_crop` but also returns the crop metadata (crop box,
+        focal region, composition score, scene type, warnings, …) so callers
+        and the frontend can inspect what was preserved or discarded.
+        """
+        focal = self._override_focal(
+            image_path, target_w, target_h, manual_focal, format_key
+        )
+        img, result = self._get_cropper().crop_image(
+            image_path, target_w, target_h, manual_focal=focal
+        )
+        return img, result.to_dict()
+
+    def get_crop_box(
+        self,
+        image_path: str,
+        target_w: int,
+        target_h: int,
+        format_key: Optional[str] = None,
+        manual_focal: Optional[Tuple[float, float]] = None,
+    ) -> Dict:
+        """
+        Return the calculated crop box and focal metadata for an image without
+        rendering the crop. Useful for frontend crop-inspection UIs.
+
+        Applies any persisted manual focal-point override for this image/format.
+        """
+        focal = self._override_focal(
+            image_path, target_w, target_h, manual_focal, format_key
+        )
+        result = self._get_cropper().compute_crop(
+            image_path, target_w, target_h, manual_focal=focal
+        )
+        return result.to_dict()
 
     def _open_thumbnail(self, path: str, max_size: int = 1200) -> Image.Image:
         """
@@ -599,3 +695,32 @@ class LayoutAssembler:
         y_offset = (STORY_SIZE[1] - fg_h) // 2
         bg.paste(fg, (0, y_offset))
         return bg
+
+    # ── Crop report (for quality verification & frontend inspection) ───────
+
+    def compute_crop_report(
+        self,
+        image_paths: List[str],
+    ) -> List[Dict]:
+        """
+        Compute intelligent-crop metadata for every image across the standard
+        output formats, without rendering the crops.
+
+        Returns a list of dicts (JSON-serialisable) with one entry per
+        (image, format) pair, suitable for writing to ``crop_report.json`` and
+        for feeding the frontend crop-inspection UI.
+        """
+        formats = [
+            ("linkedin_collage_1_1", 1080, 1080),
+            ("instagram_carousel_4_5", 1080, 1350),
+            ("instagram_story_9_16", 1080, 1920),
+            ("landscape_16_9", 1920, 1080),
+        ]
+        report: List[Dict] = []
+        for path in image_paths:
+            for name, tw, th in formats:
+                entry = self.get_crop_box(path, tw, th)
+                entry["format"] = name
+                entry["source"] = path
+                report.append(entry)
+        return report
