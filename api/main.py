@@ -34,6 +34,14 @@ from config import settings, QWEN_MODEL_PATH
 from api.logger import get_logger, request_id_var, setup_logging
 from api.utils import safe_jsonify
 from content_engine.composition.smart_crop import get_override_store
+from content_engine.categories import (
+    ALL_CATEGORIES,
+    UNCERTAIN,
+    OTHER,
+    PEOPLE,
+    label_to_category,
+    normalize_category,
+)
 
 
 # Initialise structured logging before any logger.* calls
@@ -51,6 +59,99 @@ _MAX_CACHE_SIZE = 50
 
 def _safe_id(value: str) -> str:
     return re.sub(r"[^\w\-]", "_", value).strip("_")
+
+
+# ── Canonical category consolidation ────────────────────────────────────────
+#
+# Replaces three previously-divergent inline category keyword systems
+# (/api/assets/enhanced, /api/assets/categorized, /api/jobs/{id}/case-study/enriched)
+# with a single canonical source from content_engine.categories.
+#
+# Mapping from canonical backend categories to API display names used by
+# existing frontend consumers. This preserves backward compatibility while
+# routing all new classification through the canonical system.
+CANONICAL_TO_DISPLAY: dict = {
+    "event_venue": "stage",
+    "people": "crowd",
+    "speakers": "speakers",
+    "booths": "booth",
+    "products": "product",
+    "branding": "branding",
+    "signage": "signage",
+    "promotional": "awards",
+    "other": "other",
+    "uncertain": "uncertain",
+}
+
+# Reverse map: display name → canonical category (for keyword fallback)
+_DISPLAY_TO_CANONICAL: dict = {v: k for k, v in CANONICAL_TO_DISPLAY.items()}
+
+# Keyword fallback for assets that lack a canonical classification.
+# Conservative: only matches when a keyword is clearly present.
+_API_FALLBACK_KEYWORDS: dict = {
+    "stage": ["stage", "presentation", "podium", "speaker", "keynote", "talk", "lecture", "platform"],
+    "booth": ["booth", "exhibit", "display", "stand", "kiosk", "table", "setup", "counter"],
+    "crowd": ["crowd", "audience", "people", "attendees", "mass", "gathering", "spectators", "viewers"],
+    "speakers": ["speaker", "presenter", "host", "moderator", "panel", "lecturer", "guest"],
+    "networking": ["networking", "conversation", "group", "meeting", "handshake", "chat", "discussion", "interaction"],
+    "awards": ["award", "trophy", "winner", "prize", "ceremony", "medal", "recognition"],
+    "product": ["product", "launch", "demo", "showcase", "display"],
+}
+
+
+def categorize_asset_canonical(asset: dict) -> str:
+    """
+    Categorize an asset using the canonical category system.
+
+    Priority:
+      1. Use the asset's ``classification`` field if it is a valid canonical
+         category (set by the fixed pipeline).
+      2. Fall back to keyword matching against scene_concepts for backward
+         compatibility with assets processed before the pipeline fix.
+
+    Returns a canonical category identifier. Never silently coerces unknown
+    values to ``other`` — returns ``uncertain`` when no signal is available.
+    """
+    # 1. Canonical classification from the pipeline (preferred).
+    classification = asset.get("classification")
+    if classification and normalize_category(classification, UNCERTAIN) != UNCERTAIN:
+        return normalize_category(classification, UNCERTAIN)
+
+    # 2. Keyword fallback against scene_concepts.
+    scene_concepts = asset.get("scene_concepts", []) or []
+    if isinstance(scene_concepts, str):
+        scene_concepts = [scene_concepts]
+    concepts_str = " ".join(str(c) for c in scene_concepts).lower()
+
+    for display_cat, keywords in _API_FALLBACK_KEYWORDS.items():
+        if any(kw in concepts_str for kw in keywords):
+            canonical = _DISPLAY_TO_CANONICAL.get(display_cat)
+            if canonical:
+                return canonical
+
+    # No signal — uncertain, not other.
+    return UNCERTAIN
+
+
+def categorize_asset_for_api(asset: dict) -> dict:
+    """
+    Return an API-compatible category dict for an asset.
+
+    Returns:
+        {
+            "category": <canonical category>,
+            "display_category": <frontend-friendly display name>,
+            "label": <human-readable label>,
+        }
+    """
+    canonical = categorize_asset_canonical(asset)
+    display = CANONICAL_TO_DISPLAY.get(canonical, canonical)
+    from content_engine.categories import category_label
+    return {
+        "category": canonical,
+        "display_category": display,
+        "label": category_label(canonical),
+    }
 
 # ── App ───────────────────────────────────────────────────────────────────────
 
@@ -1530,33 +1631,35 @@ async def get_enhanced_assets(
             'concepts': asset.get('scene_concepts', [])[:3]
         })
 
-    category_keywords = {
-        'stage': {'keywords': ['stage', 'presentation', 'podium', 'speaker', 'keynote', 'talk', 'lecture', 'platform'], 'icon': '🎤'},
-        'booth': {'keywords': ['booth', 'exhibit', 'display', 'stand', 'kiosk', 'table', 'setup', 'counter'], 'icon': '🏪'},
-        'crowd': {'keywords': ['crowd', 'audience', 'people', 'attendees', 'mass', 'gathering', 'spectators', 'viewers'], 'icon': '👥'},
-        'speakers': {'keywords': ['speaker', 'presenter', 'host', 'moderator', 'panel', 'lecturer', 'guest'], 'icon': '🎙️'},
-        'networking': {'keywords': ['networking', 'conversation', 'handshake', 'meeting', 'chat', 'discussion', 'interaction'], 'icon': '🤝'},
-        'awards': {'keywords': ['award', 'trophy', 'winner', 'prize', 'ceremony', 'medal', 'recognition'], 'icon': '🏆'},
-    }
-
+    # Consolidated categorization using canonical categories.
     per_category = {}
-    for cat_id, cat_info in category_keywords.items():
+    for cat_id in CANONICAL_TO_DISPLAY:
         cat_assets = []
         for asset in unique_assets[:30]:
-            concepts = ' '.join(asset.get('scene_concepts', [])).lower()
-            if any(kw in concepts for kw in cat_info['keywords']):
+            if categorize_asset_canonical(asset) == cat_id:
                 cat_assets.append({
                     'id': asset.get('id', ''),
                     'url': f"/uploads/{Path(asset.get('path', '')).name}",
                     'score': asset.get('final_score', 0),
                     'faces': asset.get('face_count', 0),
-                    'concepts': asset.get('scene_concepts', [])[:3]
+                    'concepts': asset.get('scene_concepts', [])[:3],
+                    # Score provenance (availability-aware scoring)
+                    'score_available_signals': asset.get('score_available_signals', []),
+                    'score_missing_signals': asset.get('score_missing_signals', []),
+                    'score_effective_weights': asset.get('score_effective_weights', {}),
+                    'score_is_partial': asset.get('score_is_partial', False),
+                    'score_valid': asset.get('score_valid', False),
+                    # Classification diagnostics
+                    'classification_explanation': asset.get('classification_explanation', None),
                 })
         cat_assets.sort(key=lambda x: x['score'], reverse=True)
+        display = CANONICAL_TO_DISPLAY[cat_id]
         per_category[cat_id] = {
-            'name': cat_id.capitalize(),
-            'icon': cat_info['icon'],
-            'color': '#e8f5e9' if cat_id == 'booth' else '#e3f2fd',
+            'name': display.capitalize(),
+            'display_category': display,
+            'canonical_category': cat_id,
+            'label': category_label(cat_id),
+            'color': '#e8f5e9' if cat_id == 'booths' else '#e3f2fd',
             'assets': cat_assets[:top_n_per_category]
         }
 
@@ -1601,18 +1704,7 @@ async def get_categorized_assets(job_id: str):
             'pending_processing': True
         }
 
-    # Define category keywords for scene matching (expanded for better matching)
-    category_keywords = {
-        'stage': ['stage', 'presentation', 'podium', 'speaker', 'keynote', 'talk', 'lecture', 'platform'],
-        'booth': ['booth', 'exhibit', 'display', 'stand', 'kiosk', 'table', 'setup', 'counter'],
-        'crowd': ['crowd', 'audience', 'people', 'attendees', 'mass', 'gathering', 'spectators', 'viewers'],
-        'speakers': ['speaker', 'presenter', 'host', 'moderator', 'panel', 'lecturer', 'guest'],
-        'networking': ['networking', 'conversation', 'group', 'meeting', 'handshake', 'chat', 'discussion', 'interaction'],
-        'awards': ['award', 'trophy', 'winner', 'prize', 'ceremony', 'medal', 'recognition'],
-        'product': ['product', 'launch', 'demo', 'showcase', 'display']
-    }
-
-    # Categorize each asset
+    # Consolidated categorization using canonical categories.
     categorized = defaultdict(list)
     top_assets = []
 
@@ -1625,13 +1717,9 @@ async def get_categorized_assets(job_id: str):
         if not asset_path or not asset_id:
             continue
 
-        # Determine category
-        assigned_category = 'other'
-        concepts_str = ' '.join(scene_concepts).lower()
-        for category, keywords in category_keywords.items():
-            if any(kw in concepts_str for kw in keywords):
-                assigned_category = category
-                break
+        # Determine category using canonical system.
+        cat_info = categorize_asset_for_api(asset)
+        assigned_category = cat_info["display_category"]
 
         asset_info = {
             'id': asset_id,
@@ -1639,7 +1727,16 @@ async def get_categorized_assets(job_id: str):
             'score': asset_score,
             'face_count': asset.get('face_count', 0),
             'concepts': scene_concepts[:3],
-            'category': assigned_category
+            'category': assigned_category,
+            'canonical_category': cat_info["category"],
+            'category_label': cat_info["label"],
+            # Score provenance (availability-aware scoring)
+            'score_available_signals': asset.get('score_available_signals', []),
+            'score_missing_signals': asset.get('score_missing_signals', []),
+            'score_effective_weights': asset.get('score_effective_weights', {}),
+            'score_is_partial': asset.get('score_is_partial', False),
+            # Classification diagnostics
+            'classification_explanation': asset.get('classification_explanation', None),
         }
 
         categorized[assigned_category].append(asset_info)
@@ -1989,14 +2086,7 @@ async def get_enriched_case_study(job_id: str):
             confidence_scores: list[float] = []
             face_counts: list[int] = []
 
-            category_keywords = {
-                'stage': ['stage', 'presentation', 'podium', 'speaker', 'keynote', 'talk', 'lecture', 'platform'],
-                'booth': ['booth', 'exhibit', 'display', 'stand', 'kiosk', 'table', 'setup', 'counter'],
-                'crowd': ['crowd', 'audience', 'people', 'attendees', 'mass', 'gathering', 'spectators', 'viewers'],
-                'speakers': ['speaker', 'presenter', 'host', 'moderator', 'panel', 'lecturer', 'guest'],
-                'networking': ['networking', 'conversation', 'group', 'meeting', 'handshake', 'chat', 'discussion', 'interaction'],
-                'awards': ['award', 'trophy', 'winner', 'prize', 'ceremony', 'medal', 'recognition'],
-            }
+            # Consolidated categorization using canonical categories.
 
             for asset in all_assets:
                 try:
@@ -2015,19 +2105,9 @@ async def get_enriched_case_study(job_id: str):
                     confidence_scores.append(final_score)
                     face_counts.append(face_count)
 
-                    # Determine category
-                    raw_concepts = asset.get('scene_concepts', [])
-                    if raw_concepts is None:
-                        raw_concepts = []
-                    if not isinstance(raw_concepts, list):
-                        raw_concepts = [str(raw_concepts)]
-
-                    concepts_str = ' '.join([str(c) for c in raw_concepts]).lower()
-                    asset_category = 'other'
-                    for cat, keywords in category_keywords.items():
-                        if any(kw in concepts_str for kw in keywords):
-                            asset_category = cat
-                            break
+                    # Determine category using canonical system.
+                    cat_info = categorize_asset_for_api(asset)
+                    asset_category = cat_info["display_category"]
                     category_distribution[asset_category] += 1
 
                     # Build asset info
@@ -2042,7 +2122,14 @@ async def get_enriched_case_study(job_id: str):
                         'faces': face_count,
                         'concepts': (raw_concepts[:3] if raw_concepts else []),
                         'category': asset_category,
-                        'low_confidence': final_score < 0.5
+                        'low_confidence': final_score < 0.5,
+                        # Score provenance (availability-aware scoring)
+                        'score_available_signals': asset.get('score_available_signals', []),
+                        'score_missing_signals': asset.get('score_missing_signals', []),
+                        'score_effective_weights': asset.get('score_effective_weights', {}),
+                        'score_is_partial': asset.get('score_is_partial', False),
+                        # Classification diagnostics
+                        'classification_explanation': asset.get('classification_explanation', None),
                     }
 
                     if final_score >= 0.5:
@@ -2246,6 +2333,7 @@ def _serialise_selections(selections) -> list:
     results = []
     for s in selections:
         file_name = Path(s.asset.path).name
+        asset = s.asset
         results.append({
             "filename":         file_name,
             "file_url":         f"/uploads/{file_name}",
@@ -2254,16 +2342,24 @@ def _serialise_selections(selections) -> list:
             "low_confidence":   s.confidence < 0.5,
             "selection_reason": s.selection_reason,
             "scores": {
-                "quality":   round(s.asset.quality_score, 4),
-                "aesthetic": round(s.asset.aesthetic_score, 4),
-                "final":     round(s.asset.final_score, 4),
+                "quality":   round(asset.quality_score, 4),
+                "aesthetic": round(asset.aesthetic_score, 4),
+                "final":     round(asset.final_score, 4),
             },
-            "face_count":      s.asset.face_count,
+            "face_count":      asset.face_count,
             "bboxes":          [],
-            "scene_concepts":  s.asset.scene_concepts[:8],
-            "asset_type":      s.asset.asset_type,
-            "duration":        s.asset.duration,
-            "highlight_clips": s.asset.highlight_clips or [],
+            "scene_concepts":  asset.scene_concepts[:8],
+            "asset_type":      asset.asset_type,
+            "duration":        asset.duration,
+            "highlight_clips": asset.highlight_clips or [],
+            # Score provenance (availability-aware scoring)
+            "score_available_signals": getattr(asset, "score_available_signals", []),
+            "score_missing_signals": getattr(asset, "score_missing_signals", []),
+            "score_effective_weights": getattr(asset, "score_effective_weights", {}),
+            "score_is_partial": getattr(asset, "score_is_partial", False),
+            "score_valid": getattr(asset, "score_valid", False),
+            # Classification diagnostics
+            "classification_explanation": getattr(asset, "classification_explanation", None),
         })
     return results
 

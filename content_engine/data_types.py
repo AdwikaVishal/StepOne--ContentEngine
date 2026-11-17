@@ -5,6 +5,12 @@ Shared data classes used across the entire pipeline.
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
+from content_engine.categories import (
+    UNCERTAIN,
+    is_valid_category,
+    normalize_category,
+)
+
 
 @dataclass
 class AssetMetadata:
@@ -27,9 +33,25 @@ class AssetMetadata:
     model_confidence: float = 0.0            # model's own confidence (not calibrated probability)
     human_verified: bool = False             # human review status
     selection_reason: Optional[str] = None   # why included/excluded
-    classification: str = "uncertain"        # semantic category
+    classification: str = "uncertain"        # semantic category (canonical)
     classification_confidence: float = 0.0   # confidence in category assignment
     uncalibrated: bool = True                # true when scores are ranking scores, not probabilities
+
+    # ── Score provenance (D-006: availability-aware renormalization) ─────────
+    score_available_signals: List[str] = field(default_factory=list)   # signals that contributed
+    score_missing_signals: List[str] = field(default_factory=list)     # signals that were unavailable
+    score_effective_weights: Dict[str, float] = field(default_factory=dict)  # weights after renormalization
+    score_is_partial: bool = False                                     # True when some signals were unavailable
+    score_valid: bool = False                                          # True when at least one signal contributed
+
+    # ── Classification diagnostics (D-008/D-009 observability) ────────────────
+    classification_explanation: Optional[Dict[str, object]] = None  # structured evidence for category assignment
+
+    def __post_init__(self) -> None:
+        """Normalize classification to a canonical category identifier."""
+        object.__setattr__(self, "classification", normalize_category(self.classification, UNCERTAIN))
+        if not is_valid_category(self.classification):
+            object.__setattr__(self, "classification", UNCERTAIN)
 
 
 @dataclass

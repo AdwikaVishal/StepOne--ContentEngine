@@ -4,7 +4,7 @@ import {
   Sparkles, Plus, Check, Zap, ChevronLeft, Star, LayoutGrid, Users,
   TrendingUp, Layout, Loader2, AlertCircle, Eye, RefreshCw,
   Mic, Store, Mic2, Handshake, Trophy, Tag, Search, Image as ImageIcon,
-  SlidersHorizontal
+  SlidersHorizontal, Building, Package, Flag, Megaphone, Folder, HelpCircle
 } from 'lucide-react';
 
 import { Card, Btn } from '../components/ui';
@@ -14,10 +14,21 @@ import { LINKEDIN_LAYOUTS, STORY_LAYOUTS, REEL_LAYOUTS } from '../constants/layo
 import './AssetSelectionPage.css';
 
 const categoryIcons = {
-  stage: Mic,
-  booth: Store,
-  crowd: Users,
+  // Canonical backend categories
+  event_venue: Building,
+  people: Users,
   speakers: Mic2,
+  booths: Store,
+  products: Package,
+  branding: Tag,
+  signage: Flag,
+  promotional: Megaphone,
+  other: Folder,
+  uncertain: HelpCircle,
+  // Display-name aliases (backward compatibility with API display categories)
+  stage: Building,
+  crowd: Users,
+  booth: Store,
   networking: Handshake,
   awards: Trophy,
 };
@@ -637,6 +648,16 @@ function _toPct(s?: string) {
                       <div className="asset-badge score">
                         <TrendingUp size={10} /> {Math.round(asset.score * 100)}%
                       </div>
+                      {asset.category && asset.category !== 'uncertain' && (
+                        <div className="asset-badge category" title={asset.category_label || asset.category}>
+                          {categoryIcons[asset.category as keyof typeof categoryIcons] ?? Tag} {asset.category_label || asset.category}
+                        </div>
+                      )}
+                      {asset.category === 'uncertain' && (
+                        <div className="asset-badge category" title="Insufficient signals for classification — marked uncertain, not other">
+                          <HelpCircle size={10} /> Uncertain
+                        </div>
+                      )}
                       {asset.faces > 0 && (
                         <div className="asset-badge faces">
                           <Users size={9} /> {asset.faces}

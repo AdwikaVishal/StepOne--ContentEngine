@@ -5,9 +5,10 @@ platform-specific selections with human-readable explanations.
 """
 
 import cv2
+import math
 import numpy as np
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .data_types import AssetMetadata, SelectionResult
@@ -15,6 +16,14 @@ from .models.quality import QualityAssessor
 from .models.face_detection import FaceDetector
 from .models.content_understanding import ContentUnderstander
 from .models.video_processing import VideoProcessor
+from content_engine.categories import (
+    UNCERTAIN,
+    OTHER,
+    PEOPLE,
+    label_to_category,
+    labels_to_categories,
+    normalize_category,
+)
 
 try:
     from api.logger import get_logger
@@ -45,6 +54,316 @@ _WEIGHT_AESTHETIC = 0.20
 _WEIGHT_FACES     = 0.30
 _WEIGHT_CONCEPTS  = 0.20
 _LOW_CONFIDENCE_THRESHOLD = 0.50
+
+
+# ── Classification ──────────────────────────────────────────────────────────
+
+def _classify_asset(
+    face_count: int,
+    scene_concepts: List[str],
+    relevance_scores: Dict[str, float],
+) -> tuple:
+    """
+    Classify an asset into a canonical category using genuine available signals.
+
+    Signals used:
+      - Face count (YOLOv11): > 0 indicates people are present.
+      - Scene concepts (Florence-2 <OD>): mapped to categories via keyword matching.
+      - Relevance scores (CLIP): weight the concept-to-category votes.
+
+    Returns (category, confidence, explanation) where:
+      - category is a canonical category identifier.
+      - confidence is 0.0–1.0 reflecting how strongly the signals support the category.
+      - explanation is a dict with structured diagnostic evidence for the assignment.
+
+    When signals are insufficient, returns (UNCERTAIN, 0.0, explanation) — never invents
+    a classification or silently coerces to OTHER.
+
+    Face detection alone cannot prove an asset belongs to any specific event category;
+    it only contributes a "people" vote when faces are actually detected.
+    """
+    # Gather category votes from detected scene concepts.
+    concept_votes = labels_to_categories(scene_concepts)
+
+    # Face presence adds a people vote when faces are actually detected.
+    face_contribution = 0
+    if face_count > 0:
+        concept_votes[PEOPLE] = concept_votes.get(PEOPLE, 0) + 1
+        face_contribution = 1
+
+    # Build CLIP relevance evidence for categories that received votes.
+    clip_evidence: Dict[str, float] = {}
+    if relevance_scores:
+        for concept, score in relevance_scores.items():
+            if _is_valid_score(score):
+                cat = label_to_category(concept)
+                if cat is not None and cat in concept_votes:
+                    clip_evidence[concept] = round(float(score), 4)
+
+    if not concept_votes:
+        # No detectable signal at all — uncertain, not other.
+        explanation = {
+            "classification_method": "heuristic_signal_fusion",
+            "face_count": face_count,
+            "face_contribution": face_contribution,
+            "scene_concepts": list(scene_concepts),
+            "clip_relevance": clip_evidence,
+            "category_votes": {},
+            "winning_category": None,
+            "competing_categories": {},
+            "missing_signals": ["scene_concepts", "clip_relevance"],
+            "is_uncertain": True,
+        }
+        return UNCERTAIN, 0.0, explanation
+
+    # Pick the category with the most votes.
+    best_category = max(concept_votes, key=lambda k: concept_votes[k])
+    best_votes = concept_votes[best_category]
+    total_votes = sum(concept_votes.values())
+
+    # Competing categories (all except the winner).
+    competing = {k: v for k, v in concept_votes.items() if k != best_category}
+
+    # Confidence reflects vote concentration: if one category dominates,
+    # confidence is higher. If votes are split, confidence is lower.
+    vote_share = best_votes / total_votes if total_votes > 0 else 0.0
+
+    # Boost confidence when relevance scores support the winning category.
+    relevance_boost = 0.0
+    if relevance_scores:
+        for concept, score in relevance_scores.items():
+            cat = label_to_category(concept)
+            if cat == best_category and _is_valid_score(score) and score > 0.5:
+                relevance_boost = max(relevance_boost, min(1.0, float(score)))
+                break
+
+    confidence = min(1.0, vote_share * 0.7 + relevance_boost * 0.3)
+
+    # Determine missing signals.
+    missing_signals: List[str] = []
+    if not scene_concepts:
+        missing_signals.append("scene_concepts")
+    if not relevance_scores:
+        missing_signals.append("clip_relevance")
+    if face_count == 0:
+        missing_signals.append("face_detection")
+
+    # If confidence is too low to be meaningful, return uncertain.
+    is_uncertain = confidence < 0.30
+    if is_uncertain:
+        explanation = {
+            "classification_method": "heuristic_signal_fusion",
+            "face_count": face_count,
+            "face_contribution": face_contribution,
+            "scene_concepts": list(scene_concepts),
+            "clip_relevance": clip_evidence,
+            "category_votes": dict(concept_votes),
+            "winning_category": best_category,
+            "competing_categories": competing,
+            "missing_signals": missing_signals,
+            "is_uncertain": True,
+        }
+        return UNCERTAIN, confidence, explanation
+
+    explanation = {
+        "classification_method": "heuristic_signal_fusion",
+        "face_count": face_count,
+        "face_contribution": face_contribution,
+        "scene_concepts": list(scene_concepts),
+        "clip_relevance": clip_evidence,
+        "category_votes": dict(concept_votes),
+        "winning_category": best_category,
+        "competing_categories": competing,
+        "missing_signals": missing_signals,
+        "is_uncertain": False,
+    }
+    return best_category, confidence, explanation
+
+
+# ── Availability-aware scoring (D-006) ──────────────────────────────────────
+
+def _is_valid_score(value: object) -> bool:
+    """
+    Return True when value is a genuine, finite score in [0, 1].
+
+    Rejects None, non-numeric types, booleans, NaN, infinity, and out-of-range
+    values. A successfully executed detector returning 0.0 is a valid measured
+    zero; an unavailable or failed measurement returns None or an invalid value.
+    """
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return False
+    if not isinstance(value, (int, float)):
+        return False
+    try:
+        f = float(value)
+    except (TypeError, ValueError):
+        return False
+    if math.isnan(f) or math.isinf(f):
+        return False
+    return 0.0 <= f <= 1.0
+
+
+# Recognized scoring signal names — the only weight keys permitted.
+_RECOGNIZED_WEIGHT_KEYS = {"quality", "aesthetic", "faces", "concepts"}
+
+
+def _validate_weights(weights: Dict[str, float]) -> Dict[str, float]:
+    """
+    Validate and normalize a weight configuration dict.
+
+    Only the four recognized scoring signals are permitted as weight keys:
+    quality, aesthetic, faces, concepts. Unknown keys are rejected with an
+    actionable error so they cannot mask an all-zero recognized configuration.
+
+    Rejects negative, NaN, infinite, boolean, and non-numeric values.
+    Ensures the sum of recognized weights is positive so renormalization
+    is possible. Returns a copy of the validated weights dict containing
+    only recognized keys.
+    """
+    validated: Dict[str, float] = {}
+    for name, value in weights.items():
+        if name not in _RECOGNIZED_WEIGHT_KEYS:
+            raise ValueError(
+                f"Unknown weight key '{name}'. "
+                f"Allowed scoring signals: {sorted(_RECOGNIZED_WEIGHT_KEYS)}."
+            )
+        if isinstance(value, bool):
+            raise ValueError(
+                f"Weight for '{name}' must be a numeric score, got boolean {value!r}"
+            )
+        if not isinstance(value, (int, float)):
+            raise ValueError(
+                f"Weight for '{name}' must be numeric, got {type(value).__name__}"
+            )
+        fval = float(value)
+        if math.isnan(fval):
+            raise ValueError(f"Weight for '{name}' must not be NaN")
+        if math.isinf(fval):
+            raise ValueError(f"Weight for '{name}' must not be infinite")
+        if fval < 0.0:
+            raise ValueError(f"Weight for '{name}' must not be negative ({fval})")
+        validated[name] = fval
+
+    total = sum(validated[name] for name in _RECOGNIZED_WEIGHT_KEYS if name in validated)
+    if total <= 0.0:
+        raise ValueError(
+            "At least one recognized scoring weight must be positive; "
+            f"recognized weights sum to {total}, which makes renormalization impossible"
+        )
+
+    return validated
+
+
+def compute_availability_aware_score(
+    quality_score: Optional[float] = None,
+    aesthetic_score: Optional[float] = None,
+    face_score: Optional[float] = None,
+    concept_score: Optional[float] = None,
+    weights: Optional[Dict[str, float]] = None,
+) -> Dict[str, object]:
+    """
+    Compute a composite ranking score using only genuinely available signals.
+
+    Signals that are unavailable (None, invalid, or failed model call) are
+    excluded and their weights are renormalized over the remaining signals.
+    A measured zero (e.g. no faces detected by a working detector) is treated
+    as available evidence and contributes 0.0 to the weighted sum.
+
+    Args:
+        quality_score: technical quality score (0-1), or None if unavailable.
+        aesthetic_score: aesthetic quality score (0-1), or None if unavailable.
+        face_score: face presence score (0-1), or None if unavailable.
+        concept_score: concept match score (0-1), or None if unavailable.
+        weights: optional dict mapping signal name -> raw weight. Defaults to
+            the module-level _WEIGHT_* constants. Invalid weights raise
+            ValueError.
+
+    Returns:
+        dict with keys:
+            - score: float (0-1), 0.0 when no signals are available.
+            - score_valid: True when at least one signal was available and
+              contributed to the score; False when no signals were available.
+            - available_signals: list of signal names that contributed.
+            - missing_signals: list of signal names that were unavailable.
+            - effective_weights: dict mapping signal name -> renormalized weight.
+            - is_partial: True when at least one expected signal was missing.
+    """
+    if weights is None:
+        weights = {
+            "quality": _WEIGHT_QUALITY,
+            "aesthetic": _WEIGHT_AESTHETIC,
+            "faces": _WEIGHT_FACES,
+            "concepts": _WEIGHT_CONCEPTS,
+        }
+    else:
+        weights = _validate_weights(weights)
+
+    signals = {
+        "quality": quality_score,
+        "aesthetic": aesthetic_score,
+        "faces": face_score,
+        "concepts": concept_score,
+    }
+
+    available: Dict[str, float] = {}
+    missing: List[str] = []
+
+    for name, value in signals.items():
+        if _is_valid_score(value):
+            available[name] = float(value)
+        else:
+            missing.append(name)
+
+    # Build effective weights for all four signal names (not just weight keys).
+    effective_weights: Dict[str, float] = {
+        "quality": 0.0,
+        "aesthetic": 0.0,
+        "faces": 0.0,
+        "concepts": 0.0,
+    }
+
+    if not available:
+        # No signals available — no fabricated score. score_valid=False lets
+        # callers distinguish this from a measured 0.0.
+        return {
+            "score": 0.0,
+            "score_valid": False,
+            "available_signals": [],
+            "missing_signals": missing,
+            "effective_weights": effective_weights,
+            "is_partial": True,
+        }
+
+    total_weight = sum(weights[name] for name in available if name in weights)
+
+    if total_weight <= 0.0:
+        # All available signals have zero weight — cannot renormalize.
+        return {
+            "score": 0.0,
+            "score_valid": False,
+            "available_signals": list(available.keys()),
+            "missing_signals": missing,
+            "effective_weights": effective_weights,
+            "is_partial": bool(missing),
+        }
+
+    weighted_sum = sum(available[name] * weights[name] for name in available if name in weights)
+    score = round(weighted_sum / total_weight, 4)
+
+    for name in effective_weights:
+        if name in available and name in weights:
+            effective_weights[name] = round(weights[name] / total_weight, 4)
+
+    return {
+        "score": score,
+        "score_valid": True,
+        "available_signals": list(available.keys()),
+        "missing_signals": missing,
+        "effective_weights": effective_weights,
+        "is_partial": bool(missing),
+    }
 
 
 class ContentEngine:
@@ -81,60 +400,132 @@ class ContentEngine:
     # ------------------------------------------------------------------
 
     def _process_image(self, asset_path: str) -> Optional[AssetMetadata]:
-        """Score a single image through all four models."""
-        quality = self.quality_assessor.assess(asset_path)
+        """Score a single image through all four models.
+
+        Uses availability-aware scoring (D-006): only signals that were
+        successfully computed contribute to the final score. Unavailable
+        signals are excluded and their weights are renormalized. A measured
+        zero (e.g. no faces detected by a working detector) is treated as
+        available evidence, not as a missing signal.
+        """
+        # ── Quality assessment ──────────────────────────────────────────
+        quality_available = True
+        try:
+            quality = self.quality_assessor.assess(asset_path)
+        except Exception:
+            quality_available = False
+            quality = {
+                "blur_score": 0.0,
+                "brightness_score": 0.0,
+                "aesthetic_score": 0.0,
+                "quality_score": 0.0,
+            }
+
+        quality_score = quality.get("quality_score") if quality_available else None
+        aesthetic_score = quality.get("aesthetic_score") if quality_available else None
 
         # Technical quality = blur + brightness only (exclude aesthetic so metrics stay separated)
-        technical_quality = round(
-            quality["blur_score"] * 0.5 + quality["brightness_score"] * 0.3, 4
-        )
+        if quality_available:
+            technical_quality = round(
+                quality["blur_score"] * 0.5 + quality["brightness_score"] * 0.3, 4
+            )
+        else:
+            technical_quality = 0.0
 
-        face_result = self.face_detector.detect_faces_detailed(asset_path)
-        content = self.content_understander.understand_image(asset_path)
+        # ── Face detection ──────────────────────────────────────────────
+        face_available = True
+        try:
+            face_result = self.face_detector.detect_faces_detailed(asset_path)
+        except Exception:
+            face_available = False
+            face_result = {
+                "face_count": 0,
+                "confidences": [],
+                "bboxes": [],
+                "bboxes_norm": [],
+                "weights": [],
+                "weighted_score": 0.0,
+            }
 
         # Item 13: use weighted_score (size-aware) instead of raw count
-        face_score = face_result["weighted_score"]
+        face_score = face_result.get("weighted_score") if face_available else None
+
+        # ── Content understanding ───────────────────────────────────────
+        concept_available = True
+        try:
+            content = self.content_understander.understand_image(asset_path)
+        except Exception:
+            concept_available = False
+            content = {
+                "scene_concepts": [],
+                "relevance_scores": {},
+                "concept_match_score": None,
+            }
+
         # concept_match_score may be None when cloud provider cannot
-        # compute CLIP-equivalent similarity; treat as 0.0 for scoring
-        concept_match_score = content["concept_match_score"]
+        # compute CLIP-equivalent similarity; None = unavailable, 0.0 = measured zero
+        concept_match_score = content.get("concept_match_score")
         if concept_match_score is None:
-            concept_match_score = 0.0
+            concept_available = False
 
-        # ── Classification from available signals (never fabricate) ─────────
-        category, class_conf = self._classify_asset(
-            content["scene_concepts"],
-            face_result["face_count"],
-            quality,
+        # ── Brand relevance (brand name similarity) ─────────────────────────────────
+        brand_relevance = 0.0
+        if hasattr(content, 'brand_scores'):
+            brand_scores = content.get('brand_scores', {})
+            if brand_scores:
+                # Take the maximum brand similarity score
+                brand_relevance = max(brand_scores.values())
+        
+        # ── Model confidence (if available) ─────────────────────────────────────
+        # Use the concept_match_score if it's a calibrated confidence,
+        # otherwise treat it as semantic relevance
+        model_confidence = concept_match_score if concept_available else None
+
+        # ── Final ranking score (availability-aware, D-006) ──────────────────────
+        scoring = compute_availability_aware_score(
+            quality_score=quality_score,
+            aesthetic_score=aesthetic_score,
+            face_score=face_score,
+            concept_score=concept_match_score,
         )
+        final_score = scoring["score"]
+        score_valid = scoring["score_valid"]
 
-        # ── Composite final score ──────────────────────────────────────────
-        # Weights: quality 30%, aesthetic 20%, faces 30%, concepts 20%.
-        # Missing signals (faces=0, concepts=0) contribute 0 rather than
-        # penalising the asset — they simply don't add to the score.
-        final_score = (
-            quality["quality_score"] * _WEIGHT_QUALITY
-            + quality["aesthetic_score"] * _WEIGHT_AESTHETIC
-            + face_score * _WEIGHT_FACES
-            + concept_match_score * _WEIGHT_CONCEPTS
+        # ── Classification ──────────────────────────────────────────────────────
+        # Uses genuine signals only: face count + Florence-2 scene concepts +
+        # CLIP relevance scores. Returns UNCERTAIN when signals are insufficient
+        # — never invents a classification or silently coerces to OTHER.
+        category, class_conf, classification_explanation = _classify_asset(
+            face_count=face_result.get("face_count", 0),
+            scene_concepts=content.get("scene_concepts", []),
+            relevance_scores=content.get("relevance_scores", {}),
         )
 
         return AssetMetadata(
             path=asset_path,
             asset_type="image",
-            quality_score=quality["quality_score"],
-            aesthetic_score=quality["aesthetic_score"],
-            face_count=face_result["face_count"],
-            face_confidences=face_result["confidences"],
-            relevance_scores=content["relevance_scores"],
-            scene_concepts=content["scene_concepts"],
+            quality_score=quality.get("quality_score", 0.0),
+            aesthetic_score=quality.get("aesthetic_score", 0.0),
+            face_count=face_result.get("face_count", 0),
+            face_confidences=face_result.get("confidences", []),
+            relevance_scores=content.get("relevance_scores", {}),
+            scene_concepts=content.get("scene_concepts", []),
             final_score=final_score,
-            # Separated metrics
+            # Separated metrics (do not conflate)
             technical_quality=technical_quality,
-            semantic_relevance=concept_match_score,
-            model_confidence=concept_match_score,
+            semantic_relevance=concept_match_score if concept_match_score is not None else 0.0,
+            brand_relevance=brand_relevance,
+            model_confidence=model_confidence if model_confidence is not None else 0.0,
             uncalibrated=True,
             classification=category,
             classification_confidence=class_conf,
+            classification_explanation=classification_explanation,
+            # Score provenance (D-006)
+            score_available_signals=scoring["available_signals"],
+            score_missing_signals=scoring["missing_signals"],
+            score_effective_weights=scoring["effective_weights"],
+            score_is_partial=scoring["is_partial"],
+            score_valid=score_valid,
         )
 
     def _best_video_frame(self, asset_path: str, cap: cv2.VideoCapture,
@@ -178,6 +569,11 @@ class ContentEngine:
           3. Skipping the quality floor — video frames are inherently blurrier
              than photos; the floor is only meaningful for still images
           4. Extracting highlight clips and adjusting the final score
+
+        Uses availability-aware scoring (D-006): only signals that were
+        successfully computed contribute to the base score. Unavailable
+        signals are excluded and their weights are renormalized. Video-specific
+        highlight adjustment is applied after the base score is computed.
         """
         cap = cv2.VideoCapture(asset_path)
         if not cap.isOpened():
@@ -205,32 +601,115 @@ class ContentEngine:
         temp_frame_path = str(Path(asset_path).with_suffix("._tmp_frame.jpg"))
         cv2.imwrite(temp_frame_path, best_frame)
 
+        # ── Quality assessment ──────────────────────────────────────────
+        quality_available = True
         try:
             quality = self.quality_assessor.assess(temp_frame_path)
-            face_result = self.face_detector.detect_faces_detailed(temp_frame_path)
-            content = self.content_understander.understand_image(temp_frame_path)
+        except Exception:
+            quality_available = False
+            quality = {
+                "blur_score": 0.0,
+                "brightness_score": 0.0,
+                "aesthetic_score": 0.0,
+                "quality_score": 0.0,
+            }
         finally:
             Path(temp_frame_path).unlink(missing_ok=True)
 
-        face_score = face_result["weighted_score"]
-        final_score = (
-            quality["quality_score"] * _WEIGHT_QUALITY
-            + quality["aesthetic_score"] * _WEIGHT_AESTHETIC
-            + face_score * _WEIGHT_FACES
-            + content["concept_match_score"] * _WEIGHT_CONCEPTS
+        quality_score = quality.get("quality_score") if quality_available else None
+        aesthetic_score = quality.get("aesthetic_score") if quality_available else None
+
+        # Technical quality = blur + brightness only
+        if quality_available:
+            technical_quality = round(
+                quality["blur_score"] * 0.5 + quality["brightness_score"] * 0.3, 4
+            )
+        else:
+            technical_quality = 0.0
+
+        # ── Face detection ──────────────────────────────────────────────
+        face_available = True
+        try:
+            face_result = self.face_detector.detect_faces_detailed(temp_frame_path)
+        except Exception:
+            face_available = False
+            face_result = {
+                "face_count": 0,
+                "confidences": [],
+                "bboxes": [],
+                "bboxes_norm": [],
+                "weights": [],
+                "weighted_score": 0.0,
+            }
+
+        # Item 13: use weighted_score (size-aware) instead of raw count
+        face_score = face_result.get("weighted_score") if face_available else None
+
+        # ── Content understanding ───────────────────────────────────────
+        concept_available = True
+        try:
+            content = self.content_understander.understand_image(temp_frame_path)
+        except Exception:
+            concept_available = False
+            content = {
+                "scene_concepts": [],
+                "relevance_scores": {},
+                "concept_match_score": None,
+            }
+
+        # concept_match_score may be None when cloud provider cannot
+        # compute CLIP-equivalent similarity; None = unavailable, 0.0 = measured zero
+        concept_match_score = content.get("concept_match_score")
+        if concept_match_score is None:
+            concept_available = False
+
+        # ── Brand relevance (brand name similarity) ─────────────────────────────────
+        brand_relevance = 0.0
+        if hasattr(content, 'brand_scores'):
+            brand_scores = content.get('brand_scores', {})
+            if brand_scores:
+                # Take the maximum brand similarity score
+                brand_relevance = max(brand_scores.values())
+
+        # ── Model confidence (if available) ─────────────────────────────────────
+        model_confidence = concept_match_score if concept_available else None
+
+        # ── Base ranking score (availability-aware, D-006) ──────────────────────
+        scoring = compute_availability_aware_score(
+            quality_score=quality_score,
+            aesthetic_score=aesthetic_score,
+            face_score=face_score,
+            concept_score=concept_match_score,
+        )
+        base_score = scoring["score"]
+        score_valid = scoring["score_valid"]
+
+        # ── Classification ──────────────────────────────────────────────────────
+        category, class_conf, classification_explanation = _classify_asset(
+            face_count=face_result.get("face_count", 0),
+            scene_concepts=content.get("scene_concepts", []),
+            relevance_scores=content.get("relevance_scores", {}),
         )
 
         metadata = AssetMetadata(
             path=asset_path,
             asset_type="video",
-            quality_score=quality["quality_score"],
-            aesthetic_score=quality["aesthetic_score"],
-            face_count=face_result["face_count"],
-            face_confidences=face_result["confidences"],
-            relevance_scores=content["relevance_scores"],
-            scene_concepts=content["scene_concepts"],
+            quality_score=quality.get("quality_score", 0.0),
+            aesthetic_score=quality.get("aesthetic_score", 0.0),
+            face_count=face_result.get("face_count", 0),
+            face_confidences=face_result.get("confidences", []),
+            relevance_scores=content.get("relevance_scores", {}),
+            scene_concepts=content.get("scene_concepts", []),
             duration=duration,
-            final_score=final_score,
+            final_score=base_score,
+            # Score provenance (D-006) — set before highlight adjustment
+            score_available_signals=scoring["available_signals"],
+            score_missing_signals=scoring["missing_signals"],
+            score_effective_weights=scoring["effective_weights"],
+            score_is_partial=scoring["is_partial"],
+            score_valid=score_valid,
+            # Classification diagnostics (D-008/D-009)
+            classification_explanation=classification_explanation,
         )
 
         # Extract highlights and adjust score by highlight quality (with timeout)
@@ -257,6 +736,15 @@ class ContentEngine:
                 signal.alarm(0)
         except Exception:
             metadata.highlight_clips = []
+
+        # Update AssetMetadata with additional metrics
+        metadata.technical_quality = technical_quality
+        metadata.semantic_relevance = concept_match_score if concept_match_score is not None else 0.0
+        metadata.brand_relevance = brand_relevance
+        metadata.model_confidence = model_confidence if model_confidence is not None else 0.0
+        metadata.uncalibrated = True
+        metadata.classification = category
+        metadata.classification_confidence = class_conf
 
         return metadata
 

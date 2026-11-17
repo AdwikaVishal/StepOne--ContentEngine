@@ -293,6 +293,14 @@ def _run_pipeline(job_id: str, asset_paths: list, event_description: str) -> Non
                     "aesthetic_score": metadata.aesthetic_score,
                     "scene_concepts": metadata.scene_concepts,
                     "face_count": metadata.face_count,
+                    # Score provenance (availability-aware scoring)
+                    "score_available_signals": getattr(metadata, "score_available_signals", []),
+                    "score_missing_signals": getattr(metadata, "score_missing_signals", []),
+                    "score_effective_weights": getattr(metadata, "score_effective_weights", {}),
+                    "score_is_partial": getattr(metadata, "score_is_partial", False),
+                    "score_valid": getattr(metadata, "score_valid", False),
+                    # Classification diagnostics
+                    "classification_explanation": getattr(metadata, "classification_explanation", None),
                 })
             else:
                 from pathlib import Path
@@ -305,6 +313,16 @@ def _run_pipeline(job_id: str, asset_paths: list, event_description: str) -> Non
                     "aesthetic_score": 0.0,
                     "scene_concepts": [],
                     "face_count": 0,
+                    # Score provenance (availability-aware scoring)
+                    "score_available_signals": [],
+                    "score_missing_signals": ["quality", "aesthetic", "faces", "concepts"],
+                    "score_effective_weights": {
+                        "quality": 0.0,
+                        "aesthetic": 0.0,
+                        "faces": 0.0,
+                        "concepts": 0.0,
+                    },
+                    "score_is_partial": True,
                 })
         
         _update(job_id, assets=all_processed_assets)
@@ -334,6 +352,14 @@ def _run_pipeline(job_id: str, asset_paths: list, event_description: str) -> Non
                 "asset_type":      s.asset.asset_type,
                 "duration":        s.asset.duration,
                 "highlight_clips": s.asset.highlight_clips or [],
+                # Score provenance (availability-aware scoring)
+                "score_available_signals": getattr(s.asset, "score_available_signals", []),
+                "score_missing_signals": getattr(s.asset, "score_missing_signals", []),
+                "score_effective_weights": getattr(s.asset, "score_effective_weights", {}),
+                "score_is_partial": getattr(s.asset, "score_is_partial", False),
+                "score_valid": getattr(s.asset, "score_valid", False),
+                # Classification diagnostics
+                "classification_explanation": getattr(s.asset, "classification_explanation", None),
             })
 
         _update(
@@ -399,21 +425,42 @@ def _run_generate(
                     "asset_type": metadata.asset_type,
                     "duration": metadata.duration,
                     "highlight_clips": metadata.highlight_clips or [],
+                    # Score provenance (availability-aware scoring)
+                    "score_available_signals": getattr(metadata, "score_available_signals", []),
+                    "score_missing_signals": getattr(metadata, "score_missing_signals", []),
+                    "score_effective_weights": getattr(metadata, "score_effective_weights", {}),
+                    "score_is_partial": getattr(metadata, "score_is_partial", False),
+                    "score_valid": getattr(metadata, "score_valid", False),
+                    # Classification diagnostics
+                    "classification_explanation": getattr(metadata, "classification_explanation", None),
                 })
             else:
-                all_processed_assets.append({
-                    "id": f"asset-{idx}",
-                    "path": path,
-                    "filename": Path(path).name,
-                    "final_score": 0.0,
-                    "quality_score": 0.0,
-                    "aesthetic_score": 0.0,
-                    "scene_concepts": [],
-                    "face_count": 0,
-                    "asset_type": "image",
-                    "duration": 0.0,
-                    "highlight_clips": [],
-                })
+            all_processed_assets.append({
+                "id": f"asset-{idx}",
+                "path": path,
+                "filename": Path(path).name,
+                "final_score": 0.0,
+                "quality_score": 0.0,
+                "aesthetic_score": 0.0,
+                "scene_concepts": [],
+                "face_count": 0,
+                "asset_type": "image",
+                "duration": 0.0,
+                "highlight_clips": [],
+                # Score provenance (availability-aware scoring)
+                "score_available_signals": [],
+                "score_missing_signals": ["quality", "aesthetic", "faces", "concepts"],
+                "score_effective_weights": {
+                    "quality": 0.0,
+                    "aesthetic": 0.0,
+                    "faces": 0.0,
+                    "concepts": 0.0,
+                },
+                "score_is_partial": True,
+                "score_valid": False,
+                # Classification diagnostics
+                "classification_explanation": None,
+            })
         
         _update(job_id, assets=all_processed_assets)
 

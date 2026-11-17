@@ -188,8 +188,28 @@ class BrandContext:
 
 
 # ── Placeholder validation ──────────────────────────────────────────────────────
+#
+# Supported placeholder syntax (unresolved template tokens):
+#   [date]              single word in brackets
+#   [industry]          single word in brackets
+#   [event date]        multi-word phrase in brackets
+#   [1st_date]          leading digit + underscore in brackets
+#   {brand_name}        single identifier in braces
+#   {{brand_name}}      double-escaped braces (f-string literal form)
+#   {industry type}     multi-word phrase in braces
+#
+# Brace placeholders require the content to start with a letter or underscore
+# and contain only letters, digits, underscores, and spaces. This avoids
+# flagging ordinary prose or mathematical notation while catching template
+# tokens. Bracket placeholders may start with a letter, digit, or underscore.
+#
+# Ordinary hashtags (#event), normal punctuation, and bare braces ({ or })
+# are NOT flagged.
 
-_PLACEHOLDER_RE = re.compile(r"[\[{]\s*[a-zA-Z_][a-zA-Z0-9_]*\s*[\]}]")
+_PLACEHOLDER_RE = re.compile(
+    r"\{\{?\s*[a-zA-Z_][a-zA-Z0-9_ ]*\s*\}\}?"  # {word}, {{word}}, {multi word}
+    r"|\[\s*[a-zA-Z0-9_][a-zA-Z0-9_ ]*\s*\]"    # [word], [multi word], [1st_date]
+)
 
 
 def detect_placeholders(text: str) -> List[str]:
@@ -606,7 +626,8 @@ class CopyGenerator:
         brand_context: Optional[BrandContext] = None,
         validate_placeholders: bool = True,
         max_correction_attempts: int = 2,
-    ) -> str:
+        return_validation: bool = False,
+    ) -> object:
         """Generate text using the local Qwen provider.
 
         Routes exclusively through TorchLocalProvider (Qwen2.5-1.5B-Instruct,
@@ -615,6 +636,12 @@ class CopyGenerator:
         If validate_placeholders is true and unresolved placeholders are
         detected, a bounded correction/regeneration is attempted (up to
         max_correction_attempts) before returning the cleaned output.
+
+        When return_validation is true, returns a tuple
+        (output, validation_record) instead of just the output string. The
+        validation_record contains per-generation validation provenance:
+        valid, placeholders, cleaned, attempts, first_pass_valid,
+        succeeded_after_retry, exhausted.
         """
         ctx = brand_context or self._brand_context
 
@@ -648,10 +675,20 @@ class CopyGenerator:
                 raise RuntimeError("Provider returned empty output")
 
             # Placeholder validation with bounded correction
+            validation_attempts = 0
+            validation_first_pass_valid = False
+            validation_succeeded_after_retry = False
+            validation_exhausted = False
+
             if validate_placeholders:
                 for attempt in range(max_correction_attempts + 1):
+                    validation_attempts = attempt + 1
                     validation = validate_no_placeholders(output)
                     if validation["valid"]:
+                        if attempt == 0:
+                            validation_first_pass_valid = True
+                        else:
+                            validation_succeeded_after_retry = True
                         break
                     if attempt < max_correction_attempts:
                         correction_msg = (
@@ -670,14 +707,27 @@ class CopyGenerator:
                         if not output:
                             break
                 else:
-                    # Final fallback: strip any remaining placeholders
+                    # All retries exhausted — strip remaining placeholders as safe fallback.
+                    # The result still contains no unresolved template tokens.
                     output = strip_placeholders(output)
+                    validation_exhausted = True
+
+            # Final validation report on the output that will be returned.
+            final_validation = validate_no_placeholders(output) if validate_placeholders else None
 
             duration = time.perf_counter() - t0
+            validation_record = dict(final_validation) if final_validation else None
+            if validation_record is not None:
+                validation_record.update({
+                    "attempts": validation_attempts,
+                    "first_pass_valid": validation_first_pass_valid,
+                    "succeeded_after_retry": validation_succeeded_after_retry,
+                    "exhausted": validation_exhausted,
+                })
             self._record_metadata(
                 operation=operation,
                 inference_occurred=inference_occurred,
-                validation=validate_no_placeholders(output) if validate_placeholders else None,
+                validation=validation_record,
                 duration_s=round(duration, 4),
             )
             _log.info(
@@ -692,6 +742,8 @@ class CopyGenerator:
                 success=True,
                 inference_occurred=True,
             )
+            if return_validation:
+                return output, validation_record
             return output
         except Exception as e:
             duration = time.perf_counter() - t0
@@ -717,6 +769,124 @@ class CopyGenerator:
     @property
     def backend(self) -> str:
         return self._provider.name
+
+    # ── Per-caption validation with bounded correction ────────────────────
+
+    def _validate_and_correct_caption(
+        self,
+        text: str,
+        operation: str = "caption",
+        brand_context: Optional[BrandContext] = None,
+        max_correction_attempts: int = 2,
+    ) -> tuple:
+        """
+        Validate a single caption for unresolved placeholders and retry
+        with bounded correction if needed.
+
+        Returns (cleaned_text, validation_record) where validation_record
+        contains: valid, placeholders, cleaned, attempts, first_pass_valid,
+        succeeded_after_retry, exhausted, status.
+
+        Status values:
+          - valid_first_pass: first generation passed validation
+          - valid_after_retry: a correction attempt passed
+          - validation_exhausted: retry limit reached without valid output
+          - empty_output: generation returned no usable text
+          - generation_error: local model generation failed
+          - requires_review: output exists but cannot be trusted as finished
+        """
+        ctx = brand_context or self._brand_context
+
+        # Empty or whitespace-only input cannot be validated as finished content.
+        if not text or not text.strip():
+            return "", {
+                "valid": False,
+                "placeholders": [],
+                "cleaned": "",
+                "attempts": 0,
+                "first_pass_valid": False,
+                "succeeded_after_retry": False,
+                "exhausted": True,
+                "status": "empty_output",
+            }
+
+        validation_attempts = 0
+        validation_first_pass_valid = False
+        validation_succeeded_after_retry = False
+        validation_exhausted = False
+        output = text
+
+        for attempt in range(max_correction_attempts + 1):
+            validation_attempts = attempt + 1
+            validation = validate_no_placeholders(output)
+            if validation["valid"]:
+                if attempt == 0:
+                    validation_first_pass_valid = True
+                    status = "valid_first_pass"
+                else:
+                    validation_succeeded_after_retry = True
+                    status = "valid_after_retry"
+                break
+            if attempt < max_correction_attempts:
+                placeholders = validation["placeholders"]
+                correction_msg = (
+                    f"The previous output contained unresolved template placeholders: "
+                    f"{', '.join(placeholders)}. "
+                    f"Regenerate without any bracketed or brace-enclosed placeholders. "
+                    f"If a detail is missing, rephrase naturally to omit it — never invent dates, "
+                    f"numbers, or event facts. Do not use [ ] or {{ }} tokens."
+                )
+                retry_prompt = (
+                    f"{ctx.summary()}\n\n"
+                    f"Rewrite the following caption without any placeholder tokens:\n"
+                    f"\"{output}\"\n\n"
+                    f"Retry constraint: {correction_msg}"
+                )
+                try:
+                    retry_output, _ = self._generate(
+                        retry_prompt,
+                        max_new_tokens=max(64, len(output) + 50),
+                        brand_context=brand_context,
+                        operation=operation,
+                        validate_placeholders=True,
+                        max_correction_attempts=0,  # we manage retries here
+                        return_validation=True,
+                    )
+                    if retry_output and retry_output.strip():
+                        output = retry_output.strip()
+                        continue
+                except Exception:
+                    # Generation failed on retry — fall through to exhausted handling.
+                    pass
+        else:
+            validation_exhausted = True
+
+        final_validation = validate_no_placeholders(output)
+        cleaned = strip_placeholders(output) if not final_validation["valid"] else output
+
+        # Determine final status.
+        if not output or not output.strip():
+            status = "empty_output"
+        elif validation_exhausted:
+            # Stripped output may be empty or incomplete — mark as requiring review.
+            status = "requires_review" if cleaned and cleaned.strip() else "validation_exhausted"
+        elif validation_first_pass_valid:
+            status = "valid_first_pass"
+        elif validation_succeeded_after_retry:
+            status = "valid_after_retry"
+        else:
+            status = "requires_review"
+
+        validation_record = dict(final_validation)
+        validation_record.update({
+            "attempts": validation_attempts,
+            "first_pass_valid": validation_first_pass_valid,
+            "succeeded_after_retry": validation_succeeded_after_retry,
+            "exhausted": validation_exhausted,
+            "status": status,
+        })
+
+        return cleaned, validation_record
 
     # ── Batch generation (all platforms in one LLM call) ────────────────────
 
@@ -781,14 +951,44 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no explanati
                 # shortfall to the caller so it can decide how to respond.
                 return None
             result["stories"] = [str(s) for s in stories[:num_story_frames]]
-            # Validate placeholders in all outputs
+            # Validate placeholders in all outputs with per-item bounded retries.
+            batch_validation: Dict[str, object] = {}
             for key in ("linkedin", "instagram", "reel"):
                 val = result.get(key)
                 if isinstance(val, str):
-                    v = validate_no_placeholders(val)
-                    if not v["valid"]:
-                        result[key] = v["cleaned"]
+                    item_result, item_validation = self._validate_and_correct_caption(
+                        val,
+                        operation=f"batch-{key}",
+                        brand_context=brand_ctx,
+                    )
+                    result[key] = item_result
+                    batch_validation[key] = item_validation
+            # Stories are a list; validate each story caption individually.
+            story_validation: List[Dict[str, object]] = []
+            for idx, story_val in enumerate(result["stories"]):
+                if isinstance(story_val, str):
+                    story_result, story_val_validation = self._validate_and_correct_caption(
+                        story_val,
+                        operation=f"batch-story-{idx}",
+                        brand_context=brand_ctx,
+                    )
+                    result["stories"][idx] = story_result
+                    story_validation.append(story_val_validation)
+                else:
+                    story_validation.append({
+                        "valid": False,
+                        "status": "empty_output",
+                        "placeholders": [],
+                        "cleaned": "",
+                        "attempts": 0,
+                        "first_pass_valid": False,
+                        "succeeded_after_retry": False,
+                        "exhausted": True,
+                    })
+            batch_validation["stories"] = story_validation
             _log.info("batch_captions_done", platforms=", ".join(result.keys()))
+            # Attach per-item validation provenance without removing existing fields.
+            result["validation"] = batch_validation
             return result
         except Exception as e:
             _log.warning("batch_captions_failed", error=str(e))
@@ -1174,7 +1374,7 @@ REQUIREMENTS:
 - Include {ctx.hashtag} + 2-3 relevant hashtags
 - Max 100 words
 - NOT a LinkedIn repost — Instagram native tone
-- No bracketed placeholders like [date], {brand_name}, etc.
+ - No bracketed placeholders like [date], {{brand_name}}, etc.
 - Never invent dates or event facts
 
 Write the caption:"""
@@ -1234,7 +1434,7 @@ REQUIREMENTS:
 - Include 2-3 hashtags
 - Max 60 words
 - Instagram native — NOT corporate or LinkedIn style
-- No bracketed placeholders like [date], {brand_name}, etc.
+ - No bracketed placeholders like [date], {{brand_name}}, etc.
 - Never invent dates or event facts
 
 Write the caption:"""
@@ -1291,7 +1491,7 @@ REQUIREMENTS:
 - End with clear CTA in final frame
 - No hashtags needed for stories (optional)
 - Total: {num_slides} captions, one per line, separated by |
-- No bracketed placeholders like [date], {brand_name}, etc.
+ - No bracketed placeholders like [date], {{brand_name}}, etc.
 - Never invent dates or event facts
 
 Write the story captions (format: frame1 | frame2 | frame3 | frame4):"""
